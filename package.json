@@ -1,0 +1,26 @@
+{
+  "name": "mobile-td-wars",
+  "version": "0.1.0",
+  "description": "Real-time multiplayer tower defense game",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "client": "cd client && npm run dev",
+    "server": "cd server && npm run dev",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build",
+    "ios": "npm run build:client && npx cap sync ios && npx cap open ios",
+    "android": "npm run build:client && npx cap sync android && npx cap open android"
+  },
+  "keywords": [
+    "game",
+    "tower-defense",
+    "multiplayer",
+    "mobile"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
