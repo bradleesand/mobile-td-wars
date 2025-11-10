@@ -65,7 +65,8 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Mobile TD Wars Server running on port ${PORT}`);
   console.log(`📡 WebSocket server ready`);
+  console.log(`🌐 Server accessible at http://0.0.0.0:${PORT}`);
 });
