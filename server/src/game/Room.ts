@@ -21,6 +21,7 @@ export class Room {
   private goldInterval?: NodeJS.Timeout;
   private playerSockets: Map<string, Socket> = new Map();
   private updateCounter: number = 0;
+  private playersReady: Set<string> = new Set();
 
   constructor(roomId: string, io: Server<ClientToServerEvents, ServerToClientEvents>) {
     this.id = roomId;
@@ -147,8 +148,16 @@ export class Room {
   }
 
   setPlayerReady(playerId: string): void {
-    // Implementation for ready system if needed
-    console.log(`Player ${playerId} is ready`);
+    this.playersReady.add(playerId);
+    console.log(`Player ${playerId} is ready (${this.playersReady.size}/${this.state.players.length})`);
+
+    // Start game if both players are ready
+    if (this.playersReady.size === this.state.players.length && this.state.players.length === 2) {
+      this.startGame();
+    } else {
+      // Broadcast updated state so clients know who's ready
+      this.broadcastGameState();
+    }
   }
 
   startGame(): void {

@@ -16,10 +16,12 @@ export class GameScene extends Phaser.Scene {
   private goldText!: Phaser.GameObjects.Text;
   private healthText!: Phaser.GameObjects.Text;
   private sideIndicatorText!: Phaser.GameObjects.Text;
+  private readyButton?: Phaser.GameObjects.Text;
   private selectedTowerType: TowerType | null = null;
 
   private gold: number = GAME_CONFIG.STARTING_GOLD;
   private health: number = GAME_CONFIG.BASE_HEALTH;
+  private isReady: boolean = false;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -41,6 +43,7 @@ export class GameScene extends Phaser.Scene {
 
     // UI
     this.createUI();
+    this.createReadyButton();
 
     // Network setup
     this.networkManager = NetworkManager.getInstance();
@@ -203,6 +206,42 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private createReadyButton(): void {
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
+
+    this.readyButton = this.add.text(width / 2, height / 2, 'READY', {
+      fontSize: '64px',
+      color: '#ffffff',
+      backgroundColor: '#00aa00',
+      padding: { x: 60, y: 30 }
+    })
+    .setOrigin(0.5)
+    .setInteractive({ useHandCursor: true })
+    .setVisible(false) // Hidden until both players join
+    .on('pointerdown', () => {
+      if (!this.isReady) {
+        this.isReady = true;
+        this.networkManager.ready();
+        if (this.readyButton) {
+          this.readyButton.setText('WAITING...');
+          this.readyButton.setBackgroundColor('#666666');
+          this.readyButton.disableInteractive();
+        }
+      }
+    })
+    .on('pointerover', () => {
+      if (!this.isReady && this.readyButton) {
+        this.readyButton.setBackgroundColor('#00ff00');
+      }
+    })
+    .on('pointerout', () => {
+      if (!this.isReady && this.readyButton) {
+        this.readyButton.setBackgroundColor('#00aa00');
+      }
+    });
+  }
+
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
     if (!this.selectedTowerType || !this.playerSide) return;
 
@@ -243,6 +282,15 @@ export class GameScene extends Phaser.Scene {
         this.gold = player.gold;
         this.health = player.health;
         this.updateUI();
+      }
+
+      // Show ready button if waiting for players
+      if (this.readyButton) {
+        if (room.state === 'WAITING' && room.players.length === 2) {
+          this.readyButton.setVisible(true);
+        } else if (room.state === 'PLAYING') {
+          this.readyButton.setVisible(false);
+        }
       }
 
       // Update all towers

@@ -41,10 +41,8 @@ export class GameManager {
 
     socket.join(roomId);
 
-    // Start game if both players are present
-    if (room.getPlayerCount() === 2) {
-      room.startGame();
-    }
+    // Players must click "Ready" to start the game
+    // (no auto-start)
 
     return true;
   }
