@@ -19,6 +19,9 @@ export class GameScene extends Phaser.Scene {
   private sideIndicatorText!: Phaser.GameObjects.Text;
   private readyButton?: Phaser.GameObjects.Text;
   private selectedTowerType: TowerType | null = null;
+  private towerButtons: Phaser.GameObjects.Rectangle[] = [];
+  private enemyButtons: Phaser.GameObjects.Rectangle[] = [];
+  private buttonsEnabled: boolean = false;
 
   private gold: number = GAME_CONFIG.STARTING_GOLD;
   private health: number = GAME_CONFIG.BASE_HEALTH;
@@ -119,6 +122,44 @@ export class GameScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
+    // Copy room ID button
+    const copyButton = this.add.text(width - 150, 30, '📋 COPY', {
+      fontSize: '20px',
+      color: '#ffffff',
+      backgroundColor: '#0066aa',
+      padding: { x: 15, y: 8 }
+    })
+    .setOrigin(0.5)
+    .setInteractive({ useHandCursor: true })
+    .on('pointerdown', () => {
+      // Copy to clipboard
+      navigator.clipboard.writeText(this.roomId).then(() => {
+        // Show feedback
+        copyButton.setText('✓ COPIED!');
+        copyButton.setBackgroundColor('#00aa00');
+        this.time.delayedCall(2000, () => {
+          copyButton.setText('📋 COPY');
+          copyButton.setBackgroundColor('#0066aa');
+        });
+      }).catch(() => {
+        // Fallback feedback if clipboard fails
+        copyButton.setText('✗ FAILED');
+        copyButton.setBackgroundColor('#aa0000');
+        this.time.delayedCall(2000, () => {
+          copyButton.setText('📋 COPY');
+          copyButton.setBackgroundColor('#0066aa');
+        });
+      });
+    })
+    .on('pointerover', () => {
+      copyButton.setBackgroundColor('#0088cc');
+    })
+    .on('pointerout', () => {
+      if (copyButton.text === '📋 COPY') {
+        copyButton.setBackgroundColor('#0066aa');
+      }
+    });
+
     // Bottom bar
     const bottomBar = this.add.rectangle(width / 2, height - 100, width, 200, 0x000000, 0.8).setOrigin(0.5);
 
@@ -145,6 +186,7 @@ export class GameScene extends Phaser.Scene {
         .setStrokeStyle(2, 0x00ff00)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
+          if (!this.buttonsEnabled) return; // Ignore clicks if disabled
           this.selectedTowerType = type;
           // Highlight selected
           this.children.list.forEach(child => {
@@ -158,21 +200,25 @@ export class GameScene extends Phaser.Scene {
           });
         });
 
+      // Store reference and set initial disabled state
+      this.towerButtons.push(button);
+      button.setAlpha(0.4); // Visually disabled
+
       this.add.text(x, y - 20, type, {
         fontSize: '16px',
         color: '#ffffff',
         fontStyle: 'bold'
-      }).setOrigin(0.5);
+      }).setOrigin(0.5).setAlpha(0.4);
 
       this.add.text(x, y + 10, `Cost: ${data.cost}`, {
         fontSize: '14px',
         color: '#ffff00'
-      }).setOrigin(0.5);
+      }).setOrigin(0.5).setAlpha(0.4);
 
       this.add.text(x, y + 30, `DMG: ${data.damage} | RNG: ${data.range}`, {
         fontSize: '12px',
         color: '#aaaaaa'
-      }).setOrigin(0.5);
+      }).setOrigin(0.5).setAlpha(0.4);
     });
 
     // Right section - Send Enemies
@@ -191,23 +237,28 @@ export class GameScene extends Phaser.Scene {
       const x = enemyStartX + index * (buttonWidth + buttonSpacing);
       const y = height - 100;
 
-      this.add.rectangle(x, y, buttonWidth, buttonHeight, 0xaa0000)
+      const button = this.add.rectangle(x, y, buttonWidth, buttonHeight, 0xaa0000)
         .setStrokeStyle(2, 0xff0000)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
+          if (!this.buttonsEnabled) return; // Ignore clicks if disabled
           this.sendEnemy(type);
         });
+
+      // Store reference and set initial disabled state
+      this.enemyButtons.push(button);
+      button.setAlpha(0.4); // Visually disabled
 
       this.add.text(x, y - 15, type, {
         fontSize: '14px',
         color: '#ffffff',
         fontStyle: 'bold'
-      }).setOrigin(0.5);
+      }).setOrigin(0.5).setAlpha(0.4);
 
       this.add.text(x, y + 10, `Cost: ${data.cost}`, {
         fontSize: '12px',
         color: '#ffff00'
-      }).setOrigin(0.5);
+      }).setOrigin(0.5).setAlpha(0.4);
     });
   }
 
@@ -223,7 +274,7 @@ export class GameScene extends Phaser.Scene {
     })
     .setOrigin(0.5)
     .setInteractive({ useHandCursor: true })
-    .setVisible(false) // Hidden until both players join
+    .setVisible(true) // Show from the beginning
     .on('pointerdown', () => {
       if (!this.isReady) {
         this.isReady = true;
@@ -289,11 +340,29 @@ export class GameScene extends Phaser.Scene {
         this.updateUI(room.state, room.players.length);
       }
 
-      // Show ready button if waiting for players
-      if (this.readyButton) {
-        if (room.state === 'WAITING' && room.players.length === 2) {
-          this.readyButton.setVisible(true);
-        } else if (room.state === 'PLAYING') {
+      // Handle button states based on game state
+      if (room.state === 'PLAYING' && !this.buttonsEnabled) {
+        // Enable all gameplay buttons
+        this.buttonsEnabled = true;
+        this.towerButtons.forEach(btn => btn.setAlpha(1));
+        this.enemyButtons.forEach(btn => btn.setAlpha(1));
+
+        // Enable all associated text by finding children near button positions
+        this.children.list.forEach(child => {
+          if (child instanceof Phaser.GameObjects.Text) {
+            const isNearButton = this.towerButtons.some(btn =>
+              Math.abs(child.x - btn.x) < 100 && Math.abs(child.y - btn.y) < 50
+            ) || this.enemyButtons.some(btn =>
+              Math.abs(child.x - btn.x) < 100 && Math.abs(child.y - btn.y) < 50
+            );
+            if (isNearButton) {
+              child.setAlpha(1);
+            }
+          }
+        });
+
+        // Hide ready button
+        if (this.readyButton) {
           this.readyButton.setVisible(false);
         }
       }
