@@ -17,6 +17,7 @@ export class GameScene extends Phaser.Scene {
   private goldText!: Phaser.GameObjects.Text;
   private healthText!: Phaser.GameObjects.Text;
   private sideIndicatorText!: Phaser.GameObjects.Text;
+  private copyButton!: Phaser.GameObjects.Text;
   private readyButton?: Phaser.GameObjects.Text;
   private selectedTowerType: TowerType | null = null;
   private towerButtons: Phaser.GameObjects.Rectangle[] = [];
@@ -123,7 +124,7 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Copy room ID button
-    const copyButton = this.add.text(width - 150, 30, '📋 COPY', {
+    this.copyButton = this.add.text(width / 2 + 300, 30, '📋 COPY', {
       fontSize: '20px',
       color: '#ffffff',
       backgroundColor: '#0066aa',
@@ -135,28 +136,28 @@ export class GameScene extends Phaser.Scene {
       // Copy to clipboard
       navigator.clipboard.writeText(this.roomId).then(() => {
         // Show feedback
-        copyButton.setText('✓ COPIED!');
-        copyButton.setBackgroundColor('#00aa00');
+        this.copyButton.setText('✓ COPIED!');
+        this.copyButton.setBackgroundColor('#00aa00');
         this.time.delayedCall(2000, () => {
-          copyButton.setText('📋 COPY');
-          copyButton.setBackgroundColor('#0066aa');
+          this.copyButton.setText('📋 COPY');
+          this.copyButton.setBackgroundColor('#0066aa');
         });
       }).catch(() => {
         // Fallback feedback if clipboard fails
-        copyButton.setText('✗ FAILED');
-        copyButton.setBackgroundColor('#aa0000');
+        this.copyButton.setText('✗ FAILED');
+        this.copyButton.setBackgroundColor('#aa0000');
         this.time.delayedCall(2000, () => {
-          copyButton.setText('📋 COPY');
-          copyButton.setBackgroundColor('#0066aa');
+          this.copyButton.setText('📋 COPY');
+          this.copyButton.setBackgroundColor('#0066aa');
         });
       });
     })
     .on('pointerover', () => {
-      copyButton.setBackgroundColor('#0088cc');
+      this.copyButton.setBackgroundColor('#0088cc');
     })
     .on('pointerout', () => {
-      if (copyButton.text === '📋 COPY') {
-        copyButton.setBackgroundColor('#0066aa');
+      if (this.copyButton.text === '📋 COPY') {
+        this.copyButton.setBackgroundColor('#0066aa');
       }
     });
 
@@ -337,8 +338,10 @@ export class GameScene extends Phaser.Scene {
         this.playerSide = player.side;
         this.gold = player.gold;
         this.health = player.health;
-        this.updateUI(room.state, room.players.length);
       }
+
+      // Always update UI to reflect current room state
+      this.updateUI(room.state, room.players.length);
 
       // Handle button states based on game state
       if (room.state === 'PLAYING' && !this.buttonsEnabled) {
@@ -430,12 +433,15 @@ export class GameScene extends Phaser.Scene {
       const sideText = this.playerSide === 'left' ? '← YOUR SIDE (LEFT)' : 'YOUR SIDE (RIGHT) →';
       this.sideIndicatorText.setText(sideText);
       this.sideIndicatorText.setColor('#00ff00');
+      this.copyButton.setVisible(false);
     } else if (playerCount === 1) {
       this.sideIndicatorText.setText(`Room Code: ${this.roomId} - Waiting for opponent...`);
       this.sideIndicatorText.setColor('#ffff00');
+      this.copyButton.setVisible(true);
     } else if (playerCount === 2) {
-      this.sideIndicatorText.setText(`Room Code: ${this.roomId} - Click READY to start!`);
-      this.sideIndicatorText.setColor('#ffff00');
+      this.sideIndicatorText.setText('Click READY to start!');
+      this.sideIndicatorText.setColor('#00ff00');
+      this.copyButton.setVisible(false);
     }
   }
 
