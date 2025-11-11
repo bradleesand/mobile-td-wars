@@ -461,7 +461,7 @@ export class GameScene extends Phaser.Scene {
       // Update all minions
       room.minions.forEach(minionData => {
         if (!this.minions.has(minionData.id)) {
-          const minion = new EnemySprite(this, minionData);
+          const minion = new MinionSprite(this, minionData);
           this.minions.set(minionData.id, minion);
           this.add.existing(minion);
         } else {
@@ -480,7 +480,7 @@ export class GameScene extends Phaser.Scene {
 
     this.networkManager.on('minionSpawned', (minion: Minion) => {
       if (!this.minions.has(minion.id)) {
-        const minionSprite = new EnemySprite(this, minion);
+        const minionSprite = new MinionSprite(this, minion);
         this.minions.set(minion.id, minionSprite);
         this.add.existing(minionSprite);
       }
