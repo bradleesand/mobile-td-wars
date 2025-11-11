@@ -117,6 +117,24 @@ export class Room {
       return;
     }
 
+    // Check if this tower would block all paths to enemy bases
+    const tempTower: Tower = {
+      id: 'temp',
+      ownerId: playerId,
+      type,
+      position,
+      health: 100,
+      level: 1
+    };
+
+    // Test paths from multiple spawn points to enemy bases
+    const wouldBlockPaths = this.wouldBlockAllPaths(tempTower);
+
+    if (wouldBlockPaths) {
+      this.playerSockets.get(playerId)?.emit('error', 'Tower would block all paths');
+      return;
+    }
+
     // Deduct cost
     player.gold -= towerData.cost;
 
@@ -398,6 +416,48 @@ export class Room {
     }
 
     console.log(`Room ${this.id} destroyed`);
+  }
+
+  /**
+   * Check if placing a tower would block all paths to enemy bases
+   * Returns true if the tower would block ALL paths (and should be rejected)
+   */
+  private wouldBlockAllPaths(newTower: Tower): boolean {
+    // Create temporary tower list with the new tower
+    const tempTowers = [...this.state.towers, newTower];
+
+    // Define spawn areas for both sides
+    // Left side spawns at bottom, right side spawns at top
+    const leftSpawnPoints = [
+      { x: 100, y: GAME_CONFIG.CANVAS_HEIGHT - 100 },
+      { x: GAME_CONFIG.CANVAS_WIDTH / 4, y: GAME_CONFIG.CANVAS_HEIGHT - 100 },
+      { x: GAME_CONFIG.CANVAS_WIDTH / 2 - 100, y: GAME_CONFIG.CANVAS_HEIGHT - 100 }
+    ];
+
+    const rightSpawnPoints = [
+      { x: GAME_CONFIG.CANVAS_WIDTH / 2 + 100, y: 100 },
+      { x: GAME_CONFIG.CANVAS_WIDTH * 3 / 4, y: 100 },
+      { x: GAME_CONFIG.CANVAS_WIDTH - 100, y: 100 }
+    ];
+
+    // Target bases
+    const leftBase = { x: 100, y: GAME_CONFIG.CANVAS_HEIGHT / 2 };
+    const rightBase = { x: GAME_CONFIG.CANVAS_WIDTH - 100, y: GAME_CONFIG.CANVAS_HEIGHT / 2 };
+
+    // Check if at least one path exists from left spawns to right base
+    const leftHasPath = leftSpawnPoints.some(spawn => {
+      const path = this.pathfinding.findPath(spawn, rightBase, tempTowers);
+      return path.length > 0;
+    });
+
+    // Check if at least one path exists from right spawns to left base
+    const rightHasPath = rightSpawnPoints.some(spawn => {
+      const path = this.pathfinding.findPath(spawn, leftBase, tempTowers);
+      return path.length > 0;
+    });
+
+    // Block the tower if it would block ALL paths for EITHER side
+    return !leftHasPath || !rightHasPath;
   }
 
   private generateId(): string {
