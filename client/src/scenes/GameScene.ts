@@ -23,6 +23,8 @@ export class GameScene extends Phaser.Scene {
   private selectedTowerType: TowerType | null = null;
   private towerButtons: Phaser.GameObjects.Rectangle[] = [];
   private minionButtons: Phaser.GameObjects.Rectangle[] = [];
+  private towerButtonTypes: Map<Phaser.GameObjects.Rectangle, TowerType> = new Map();
+  private minionButtonTypes: Map<Phaser.GameObjects.Rectangle, MinionType> = new Map();
   private buttonsEnabled: boolean = false;
 
   private gold: number = GAME_CONFIG.STARTING_GOLD;
@@ -219,6 +221,7 @@ export class GameScene extends Phaser.Scene {
 
       // Store reference and set initial disabled state
       this.towerButtons.push(button);
+      this.towerButtonTypes.set(button, type);
       button.setAlpha(0.4); // Visually disabled
 
       this.add.text(x, y - 20, type, {
@@ -264,6 +267,7 @@ export class GameScene extends Phaser.Scene {
 
       // Store reference and set initial disabled state
       this.minionButtons.push(button);
+      this.minionButtonTypes.set(button, type);
       button.setAlpha(0.4); // Visually disabled
 
       this.add.text(x, y - 15, type, {
@@ -508,6 +512,33 @@ export class GameScene extends Phaser.Scene {
         this.statusText.setVisible(true);
       }
     }
+
+    // Update button affordability based on current gold
+    this.updateButtonAffordability();
+  }
+
+  private updateButtonAffordability(): void {
+    if (!this.buttonsEnabled) return; // Don't update if buttons are disabled
+
+    // Update tower buttons
+    this.towerButtons.forEach(button => {
+      const type = this.towerButtonTypes.get(button);
+      if (type) {
+        const cost = GAME_CONFIG.TOWER_DATA[type].cost;
+        const affordable = this.gold >= cost;
+        button.setAlpha(affordable ? 1 : 0.5);
+      }
+    });
+
+    // Update minion buttons
+    this.minionButtons.forEach(button => {
+      const type = this.minionButtonTypes.get(button);
+      if (type) {
+        const cost = GAME_CONFIG.MINION_DATA[type].cost;
+        const affordable = this.gold >= cost;
+        button.setAlpha(affordable ? 1 : 0.5);
+      }
+    });
   }
 
   private showGameOver(isWinner: boolean): void {
