@@ -49,6 +49,10 @@ export class Room {
     this.state.players.push(player);
     this.playerSockets.set(socket.id, socket);
 
+    // Send gameState directly to joining socket first (ensures they get it even if scene isn't ready yet)
+    socket.emit('gameState', this.state);
+
+    // Also broadcast to notify other players
     this.broadcastGameState();
   }
 
