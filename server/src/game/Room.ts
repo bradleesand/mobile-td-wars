@@ -12,6 +12,7 @@ import {
   GameState,
   GAME_CONFIG
 } from '@shared/types';
+import { Pathfinding } from './Pathfinding';
 
 export class Room {
   private id: string;
@@ -22,10 +23,12 @@ export class Room {
   private playerSockets: Map<string, Socket> = new Map();
   private updateCounter: number = 0;
   private playersReady: Set<string> = new Set();
+  private pathfinding: Pathfinding;
 
   constructor(roomId: string, io: Server<ClientToServerEvents, ServerToClientEvents>) {
     this.id = roomId;
     this.io = io;
+    this.pathfinding = new Pathfinding();
 
     this.state = {
       id: roomId,
@@ -150,13 +153,33 @@ export class Room {
 
     // Determine spawn position and target
     const targetSide = player.side === 'left' ? 'right' : 'left';
-    const spawnX = player.side === 'left' ? 200 : GAME_CONFIG.CANVAS_WIDTH - 200;
-    const laneY = [
-      GAME_CONFIG.CANVAS_HEIGHT * 0.3,
-      GAME_CONFIG.CANVAS_HEIGHT * 0.5,
-      GAME_CONFIG.CANVAS_HEIGHT * 0.7
-    ];
-    const spawnY = laneY[Math.floor(Math.random() * laneY.length)];
+
+    // Spawn at edges as specified:
+    // - Left side minions spawn at bottom edge
+    // - Right side minions spawn at top edge
+    let spawnX: number;
+    let spawnY: number;
+
+    if (player.side === 'left') {
+      // Spawn at bottom edge, somewhere along the left half
+      spawnX = Math.random() * (GAME_CONFIG.CANVAS_WIDTH / 2 - 200) + 100;
+      spawnY = GAME_CONFIG.CANVAS_HEIGHT - 100;
+    } else {
+      // Spawn at top edge, somewhere along the right half
+      spawnX = Math.random() * (GAME_CONFIG.CANVAS_WIDTH / 2 - 200) + GAME_CONFIG.CANVAS_WIDTH / 2 + 100;
+      spawnY = 100;
+    }
+
+    // Calculate target position (enemy base)
+    const targetX = targetSide === 'left' ? 100 : GAME_CONFIG.CANVAS_WIDTH - 100;
+    const targetY = GAME_CONFIG.CANVAS_HEIGHT / 2;
+
+    // Calculate path from spawn to target
+    const path = this.pathfinding.findPath(
+      { x: spawnX, y: spawnY },
+      { x: targetX, y: targetY },
+      this.state.towers
+    );
 
     // Create minion
     const minion: Minion = {
@@ -165,7 +188,8 @@ export class Room {
       type,
       position: { x: spawnX, y: spawnY },
       health: minionData.health,
-      targetSide
+      targetSide,
+      path: path.length > 0 ? path : undefined
     };
 
     this.state.minions.push(minion);
@@ -216,36 +240,74 @@ export class Room {
       const minionData = GAME_CONFIG.MINION_DATA[minion.type];
       const moveSpeed = minionData.speed / 30; // Per frame at 30 FPS
 
-      // Move minion
-      if (minion.targetSide === 'left') {
-        minion.position.x -= moveSpeed;
+      // Move minion along path if it exists
+      if (minion.path && minion.path.length > 0) {
+        const target = minion.path[0];
+        const dx = target.x - minion.position.x;
+        const dy = target.y - minion.position.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Check if reached left base
-        if (minion.position.x <= 150) {
-          const leftPlayer = this.state.players.find(p => p.side === 'left');
-          if (leftPlayer) {
-            leftPlayer.health -= 10;
-            if (leftPlayer.health <= 0) {
-              const rightPlayer = this.state.players.find(p => p.side === 'right');
-              this.endGame(rightPlayer?.id || '');
+        if (distance < moveSpeed) {
+          // Reached waypoint, move to next one
+          minion.position.x = target.x;
+          minion.position.y = target.y;
+          minion.path.shift(); // Remove reached waypoint
+        } else {
+          // Move towards waypoint
+          minion.position.x += (dx / distance) * moveSpeed;
+          minion.position.y += (dy / distance) * moveSpeed;
+        }
+
+        // Check if reached final destination (no more waypoints and close to base)
+        if (minion.path.length === 0) {
+          const targetBaseX = minion.targetSide === 'left' ? 100 : GAME_CONFIG.CANVAS_WIDTH - 100;
+          const distToBase = Math.abs(minion.position.x - targetBaseX);
+
+          if (distToBase < 50) {
+            // Reached base - deal damage
+            const targetPlayer = this.state.players.find(p => p.side === minion.targetSide);
+            if (targetPlayer) {
+              targetPlayer.health -= 10;
+              if (targetPlayer.health <= 0) {
+                const winnerPlayer = this.state.players.find(p => p.side !== minion.targetSide);
+                this.endGame(winnerPlayer?.id || '');
+              }
             }
+            minionsToRemove.push(minion.id);
           }
-          minionsToRemove.push(minion.id);
         }
       } else {
-        minion.position.x += moveSpeed;
+        // Fallback: simple horizontal movement if no path
+        if (minion.targetSide === 'left') {
+          minion.position.x -= moveSpeed;
 
-        // Check if reached right base
-        if (minion.position.x >= GAME_CONFIG.CANVAS_WIDTH - 150) {
-          const rightPlayer = this.state.players.find(p => p.side === 'right');
-          if (rightPlayer) {
-            rightPlayer.health -= 10;
-            if (rightPlayer.health <= 0) {
-              const leftPlayer = this.state.players.find(p => p.side === 'left');
-              this.endGame(leftPlayer?.id || '');
+          // Check if reached left base
+          if (minion.position.x <= 150) {
+            const leftPlayer = this.state.players.find(p => p.side === 'left');
+            if (leftPlayer) {
+              leftPlayer.health -= 10;
+              if (leftPlayer.health <= 0) {
+                const rightPlayer = this.state.players.find(p => p.side === 'right');
+                this.endGame(rightPlayer?.id || '');
+              }
             }
+            minionsToRemove.push(minion.id);
           }
-          minionsToRemove.push(minion.id);
+        } else {
+          minion.position.x += moveSpeed;
+
+          // Check if reached right base
+          if (minion.position.x >= GAME_CONFIG.CANVAS_WIDTH - 150) {
+            const rightPlayer = this.state.players.find(p => p.side === 'right');
+            if (rightPlayer) {
+              rightPlayer.health -= 10;
+              if (rightPlayer.health <= 0) {
+                const leftPlayer = this.state.players.find(p => p.side === 'left');
+                this.endGame(leftPlayer?.id || '');
+              }
+            }
+            minionsToRemove.push(minion.id);
+          }
         }
       }
 
