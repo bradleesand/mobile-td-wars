@@ -434,14 +434,16 @@ export class GameScene extends Phaser.Scene {
       this.sideIndicatorText.setText(sideText);
       this.sideIndicatorText.setColor('#00ff00');
       this.copyButton.setVisible(false);
-    } else if (playerCount === 1) {
-      this.sideIndicatorText.setText(`Room Code: ${this.roomId} - Waiting for opponent...`);
-      this.sideIndicatorText.setColor('#ffff00');
-      this.copyButton.setVisible(true);
-    } else if (playerCount === 2) {
+    } else if (playerCount && playerCount >= 2) {
+      // 2+ players waiting - show ready prompt
       this.sideIndicatorText.setText('Click READY to start!');
       this.sideIndicatorText.setColor('#00ff00');
       this.copyButton.setVisible(false);
+    } else {
+      // 1 player or waiting - show room code
+      this.sideIndicatorText.setText(`Room Code: ${this.roomId} - Waiting for opponent...`);
+      this.sideIndicatorText.setColor('#ffff00');
+      this.copyButton.setVisible(true);
     }
   }
 
