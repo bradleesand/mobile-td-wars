@@ -1,3 +1,7 @@
+/**
+ * Build script for Mobile TD Wars server
+ * Bundles TypeScript server code with dependencies using esbuild
+ */
 import * as esbuild from 'esbuild';
 
 await esbuild.build({
