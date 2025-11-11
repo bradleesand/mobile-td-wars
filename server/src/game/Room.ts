@@ -183,20 +183,22 @@ export class Room {
     const targetSide = player.side === 'left' ? 'right' : 'left';
 
     // Spawn at edges as specified:
-    // - Left side minions spawn at bottom edge
+    // - Left side minions spawn at bottom edge (but within arena bounds)
     // - Right side minions spawn at top edge
     let spawnX: number;
     let spawnY: number;
     const centerX = GAME_CONFIG.CANVAS_WIDTH / 2;
+    const bottomEdge = GAME_CONFIG.CANVAS_HEIGHT - 220; // Stay above UI buttons
+    const topEdge = 100;
 
     if (player.side === 'left') {
       // Spawn at bottom edge, somewhere along the left half
       spawnX = Math.random() * (centerX - 200) + 100;
-      spawnY = GAME_CONFIG.CANVAS_HEIGHT - 100;
+      spawnY = bottomEdge;
     } else {
       // Spawn at top edge, somewhere along the right half
       spawnX = Math.random() * (centerX - 200) + centerX + 100;
-      spawnY = 100;
+      spawnY = topEdge;
     }
 
     // Create two-phase path:
@@ -207,10 +209,10 @@ export class Room {
     // Phase 1: Move along perimeter to center line
     if (player.side === 'left') {
       // Move along bottom edge to center
-      path.push({ x: centerX, y: GAME_CONFIG.CANVAS_HEIGHT - 100 });
+      path.push({ x: centerX, y: bottomEdge });
     } else {
       // Move along top edge to center
-      path.push({ x: centerX, y: 100 });
+      path.push({ x: centerX, y: topEdge });
     }
 
     // Phase 2: Pathfind from center line to enemy base
@@ -457,17 +459,20 @@ export class Room {
     const tempTowers = [...this.state.towers, newTower];
 
     // Define spawn areas for both sides
-    // Left side spawns at bottom, right side spawns at top
+    // Left side spawns at bottom (within arena), right side spawns at top
+    const bottomEdge = GAME_CONFIG.CANVAS_HEIGHT - 220;
+    const topEdge = 100;
+
     const leftSpawnPoints = [
-      { x: 100, y: GAME_CONFIG.CANVAS_HEIGHT - 100 },
-      { x: GAME_CONFIG.CANVAS_WIDTH / 4, y: GAME_CONFIG.CANVAS_HEIGHT - 100 },
-      { x: GAME_CONFIG.CANVAS_WIDTH / 2 - 100, y: GAME_CONFIG.CANVAS_HEIGHT - 100 }
+      { x: 100, y: bottomEdge },
+      { x: GAME_CONFIG.CANVAS_WIDTH / 4, y: bottomEdge },
+      { x: GAME_CONFIG.CANVAS_WIDTH / 2 - 100, y: bottomEdge }
     ];
 
     const rightSpawnPoints = [
-      { x: GAME_CONFIG.CANVAS_WIDTH / 2 + 100, y: 100 },
-      { x: GAME_CONFIG.CANVAS_WIDTH * 3 / 4, y: 100 },
-      { x: GAME_CONFIG.CANVAS_WIDTH - 100, y: 100 }
+      { x: GAME_CONFIG.CANVAS_WIDTH / 2 + 100, y: topEdge },
+      { x: GAME_CONFIG.CANVAS_WIDTH * 3 / 4, y: topEdge },
+      { x: GAME_CONFIG.CANVAS_WIDTH - 100, y: topEdge }
     ];
 
     // Target bases
