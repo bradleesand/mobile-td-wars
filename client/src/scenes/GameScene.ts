@@ -205,8 +205,7 @@ export class GameScene extends Phaser.Scene {
 
       if (this.gold >= towerData.cost) {
         this.networkManager.placeTower(this.selectedTowerType, { x: pointer.x, y: pointer.y });
-        this.gold -= towerData.cost;
-        this.updateUI();
+        // Gold will be updated by server via gameState event
       } else {
         console.log('Not enough gold!');
       }
@@ -218,8 +217,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.gold >= enemyData.cost) {
       this.networkManager.sendEnemy(type);
-      this.gold -= enemyData.cost;
-      this.updateUI();
+      // Gold will be updated by server via gameState event
     } else {
       console.log('Not enough gold!');
     }
@@ -259,15 +257,19 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.networkManager.on('towerPlaced', (tower: Tower) => {
-      const towerSprite = new TowerSprite(this, tower);
-      this.towers.set(tower.id, towerSprite);
-      this.add.existing(towerSprite);
+      if (!this.towers.has(tower.id)) {
+        const towerSprite = new TowerSprite(this, tower);
+        this.towers.set(tower.id, towerSprite);
+        this.add.existing(towerSprite);
+      }
     });
 
     this.networkManager.on('enemySpawned', (enemy: Enemy) => {
-      const enemySprite = new EnemySprite(this, enemy);
-      this.enemies.set(enemy.id, enemySprite);
-      this.add.existing(enemySprite);
+      if (!this.enemies.has(enemy.id)) {
+        const enemySprite = new EnemySprite(this, enemy);
+        this.enemies.set(enemy.id, enemySprite);
+        this.add.existing(enemySprite);
+      }
     });
 
     this.networkManager.on('entityDestroyed', (id: string) => {
