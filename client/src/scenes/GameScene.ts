@@ -286,10 +286,9 @@ export class GameScene extends Phaser.Scene {
           this.readyButton.setBackgroundColor('#666666');
           this.readyButton.disableInteractive();
         }
-        // Update status text
-        if (this.statusText) {
-          this.statusText.setText('Waiting for opponent to be ready...');
-        }
+        // Update top text to show waiting for opponent
+        this.sideIndicatorText.setText('Waiting for opponent to be ready...');
+        this.sideIndicatorText.setColor('#ffff00');
       }
     })
     .on('pointerover', () => {
@@ -469,13 +468,14 @@ export class GameScene extends Phaser.Scene {
     } else if (playerCount && playerCount >= 2) {
       console.log('[GameScene] updateUI -> showing ready prompt (2+ players)');
       // 2+ players waiting - show ready prompt
-      this.sideIndicatorText.setText('Click READY to start!');
-      this.sideIndicatorText.setColor('#00ff00');
+      if (!this.isReady) {
+        this.sideIndicatorText.setText('Click READY to start!');
+        this.sideIndicatorText.setColor('#00ff00');
+      }
       this.copyButton.setVisible(false);
-      // Update status text - don't override if already showing "waiting for opponent to be ready"
-      if (this.statusText && !this.isReady) {
-        this.statusText.setText('Both players ready - Click READY!');
-        this.statusText.setVisible(true);
+      // Hide status text when both players present
+      if (this.statusText) {
+        this.statusText.setVisible(false);
       }
     } else {
       console.log('[GameScene] updateUI -> showing room code (waiting)');
