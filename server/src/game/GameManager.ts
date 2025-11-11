@@ -1,5 +1,5 @@
 import { Server, Socket } from 'socket.io';
-import { ServerToClientEvents, ClientToServerEvents, TowerType, EnemyType, Vector2 } from '@shared/types';
+import { ServerToClientEvents, ClientToServerEvents, TowerType, MinionType, Vector2 } from '@shared/types';
 import { Room } from './Room';
 
 export class GameManager {
@@ -59,14 +59,14 @@ export class GameManager {
     room.placeTower(socket.id, type, position);
   }
 
-  handleSendEnemy(socket: Socket, type: EnemyType): void {
+  handleSendMinion(socket: Socket, type: MinionType): void {
     const roomId = this.socketToRoom.get(socket.id);
     if (!roomId) return;
 
     const room = this.rooms.get(roomId);
     if (!room) return;
 
-    room.sendEnemy(socket.id, type);
+    room.sendMinion(socket.id, type);
   }
 
   handlePlayerReady(socket: Socket): void {

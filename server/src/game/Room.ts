@@ -5,9 +5,9 @@ import {
   GameRoom,
   Player,
   Tower,
-  Enemy,
+  Minion,
   TowerType,
-  EnemyType,
+  MinionType,
   Vector2,
   GameState,
   GAME_CONFIG
@@ -31,7 +31,7 @@ export class Room {
       id: roomId,
       players: [],
       towers: [],
-      enemies: [],
+      minions: [],
       state: GameState.WAITING,
       createdAt: Date.now()
     };
@@ -114,20 +114,20 @@ export class Room {
     this.broadcastGameState();
   }
 
-  sendEnemy(playerId: string, type: EnemyType): void {
+  sendMinion(playerId: string, type: MinionType): void {
     const player = this.state.players.find(p => p.id === playerId);
     if (!player) return;
 
-    const enemyData = GAME_CONFIG.ENEMY_DATA[type];
+    const minionData = GAME_CONFIG.MINION_DATA[type];
 
     // Check if player has enough gold
-    if (player.gold < enemyData.cost) {
+    if (player.gold < minionData.cost) {
       this.playerSockets.get(playerId)?.emit('error', 'Not enough gold');
       return;
     }
 
     // Deduct cost
-    player.gold -= enemyData.cost;
+    player.gold -= minionData.cost;
 
     // Determine spawn position and target
     const targetSide = player.side === 'left' ? 'right' : 'left';
@@ -139,19 +139,19 @@ export class Room {
     ];
     const spawnY = laneY[Math.floor(Math.random() * laneY.length)];
 
-    // Create enemy
-    const enemy: Enemy = {
+    // Create minion
+    const minion: Minion = {
       id: this.generateId(),
       senderId: playerId,
       type,
       position: { x: spawnX, y: spawnY },
-      health: enemyData.health,
+      health: minionData.health,
       targetSide
     };
 
-    this.state.enemies.push(enemy);
+    this.state.minions.push(minion);
 
-    this.io.to(this.id).emit('enemySpawned', enemy);
+    this.io.to(this.id).emit('minionSpawned', minion);
     this.broadcastGameState();
   }
 
@@ -190,19 +190,19 @@ export class Room {
   private update(): void {
     if (this.state.state !== GameState.PLAYING) return;
 
-    // Update enemies
-    const enemiesToRemove: string[] = [];
+    // Update minions
+    const minionsToRemove: string[] = [];
 
-    this.state.enemies.forEach(enemy => {
-      const enemyData = GAME_CONFIG.ENEMY_DATA[enemy.type];
-      const moveSpeed = enemyData.speed / 30; // Per frame at 30 FPS
+    this.state.minions.forEach(minion => {
+      const minionData = GAME_CONFIG.MINION_DATA[minion.type];
+      const moveSpeed = minionData.speed / 30; // Per frame at 30 FPS
 
-      // Move enemy
-      if (enemy.targetSide === 'left') {
-        enemy.position.x -= moveSpeed;
+      // Move minion
+      if (minion.targetSide === 'left') {
+        minion.position.x -= moveSpeed;
 
         // Check if reached left base
-        if (enemy.position.x <= 150) {
+        if (minion.position.x <= 150) {
           const leftPlayer = this.state.players.find(p => p.side === 'left');
           if (leftPlayer) {
             leftPlayer.health -= 10;
@@ -211,13 +211,13 @@ export class Room {
               this.endGame(rightPlayer?.id || '');
             }
           }
-          enemiesToRemove.push(enemy.id);
+          minionsToRemove.push(minion.id);
         }
       } else {
-        enemy.position.x += moveSpeed;
+        minion.position.x += moveSpeed;
 
         // Check if reached right base
-        if (enemy.position.x >= GAME_CONFIG.CANVAS_WIDTH - 150) {
+        if (minion.position.x >= GAME_CONFIG.CANVAS_WIDTH - 150) {
           const rightPlayer = this.state.players.find(p => p.side === 'right');
           if (rightPlayer) {
             rightPlayer.health -= 10;
@@ -226,43 +226,43 @@ export class Room {
               this.endGame(leftPlayer?.id || '');
             }
           }
-          enemiesToRemove.push(enemy.id);
+          minionsToRemove.push(minion.id);
         }
       }
 
       // Check tower attacks
       this.state.towers.forEach(tower => {
-        // Skip if tower would attack friendly enemies
-        if (tower.ownerId === enemy.senderId) {
+        // Skip if tower would attack friendly minions
+        if (tower.ownerId === minion.senderId) {
           return; // Don't attack your own minions
         }
 
         const towerData = GAME_CONFIG.TOWER_DATA[tower.type];
         const distance = Math.sqrt(
-          Math.pow(tower.position.x - enemy.position.x, 2) +
-          Math.pow(tower.position.y - enemy.position.y, 2)
+          Math.pow(tower.position.x - minion.position.x, 2) +
+          Math.pow(tower.position.y - minion.position.y, 2)
         );
 
         if (distance <= towerData.range) {
           // Tower in range, deal damage (simplified, should use attack speed)
-          enemy.health -= towerData.damage / 30; // Spread damage over frames
+          minion.health -= towerData.damage / 30; // Spread damage over frames
 
-          if (enemy.health <= 0) {
-            enemiesToRemove.push(enemy.id);
+          if (minion.health <= 0) {
+            minionsToRemove.push(minion.id);
 
             // Reward the tower owner
             const towerOwner = this.state.players.find(p => p.id === tower.ownerId);
             if (towerOwner) {
-              towerOwner.gold += enemyData.reward;
+              towerOwner.gold += minionData.reward;
             }
           }
         }
       });
     });
 
-    // Remove dead enemies
-    enemiesToRemove.forEach(id => {
-      this.state.enemies = this.state.enemies.filter(e => e.id !== id);
+    // Remove dead minions
+    minionsToRemove.forEach(id => {
+      this.state.minions = this.state.minions.filter(m => m.id !== id);
       this.io.to(this.id).emit('entityDestroyed', id);
     });
 

@@ -49,8 +49,8 @@ io.on('connection', (socket) => {
     gameManager.handlePlaceTower(socket, type, position);
   });
 
-  socket.on('sendEnemy', (type) => {
-    gameManager.handleSendEnemy(socket, type);
+  socket.on('sendMinion', (type) => {
+    gameManager.handleSendMinion(socket, type);
   });
 
   socket.on('ready', () => {
