@@ -69,18 +69,9 @@ export class MinionSprite extends Phaser.GameObjects.Container {
   }
 
   update(delta: number): void {
-    // Move towards target base
-    const config = GAME_CONFIG.MINION_DATA[this.minionData.type];
-    const speed = config.speed * (delta / 1000);
-
-    // Move horizontally towards target side
-    if (this.minionData.targetSide === 'left') {
-      this.x -= speed;
-    } else {
-      this.x += speed;
-    }
-
-    // In a real implementation, this would sync with server
+    // Movement is now server-authoritative via pathfinding
+    // Position updates come from server through updateData()
+    // No client-side prediction needed
   }
 
   updateData(data: Partial<Minion>): void {
