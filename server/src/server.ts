@@ -63,10 +63,10 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT || '3000', 10);
 
-httpServer.listen(PORT, '0.0.0.0', () => {
+httpServer.listen(PORT, () => {
   console.log(`🚀 Mobile TD Wars Server running on port ${PORT}`);
   console.log(`📡 WebSocket server ready`);
-  console.log(`🌐 Server accessible at http://0.0.0.0:${PORT}`);
+  console.log(`🌐 Server listening on all interfaces`);
 });

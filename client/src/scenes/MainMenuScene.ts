@@ -2,8 +2,6 @@ import Phaser from 'phaser';
 import { NetworkManager } from '../managers/NetworkManager';
 
 export class MainMenuScene extends Phaser.Scene {
-  private networkManager!: NetworkManager;
-
   constructor() {
     super({ key: 'MainMenuScene' });
   }
@@ -48,13 +46,13 @@ export class MainMenuScene extends Phaser.Scene {
     });
 
     // Join room section
-    const joinText = this.add.text(width / 2, height / 2 + 100, 'Room ID:', {
+    this.add.text(width / 2, height / 2 + 100, 'Room ID:', {
       fontSize: '24px',
       color: '#ffffff'
     }).setOrigin(0.5);
 
     // Create a simple input display (in a real game, you'd use a proper input field)
-    const roomIdDisplay = this.add.text(width / 2, height / 2 + 150, '______', {
+    this.add.text(width / 2, height / 2 + 150, '______', {
       fontSize: '28px',
       color: '#ffff00',
       backgroundColor: '#333333',
@@ -88,9 +86,6 @@ export class MainMenuScene extends Phaser.Scene {
       fontSize: '20px',
       color: '#aaaaaa'
     }).setOrigin(0.5);
-
-    // Initialize network manager
-    this.networkManager = NetworkManager.getInstance();
   }
 
   private createRoom(playerName: string): void {

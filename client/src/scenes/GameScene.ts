@@ -6,7 +6,6 @@ import { TowerType, EnemyType, GAME_CONFIG, GameRoom, Tower, Enemy } from '@shar
 
 export class GameScene extends Phaser.Scene {
   private networkManager!: NetworkManager;
-  private roomId!: string;
   private playerName!: string;
   private playerId?: string;
   private playerSide?: 'left' | 'right';
@@ -26,7 +25,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   init(data: { roomId: string; playerName: string }): void {
-    this.roomId = data.roomId;
     this.playerName = data.playerName;
   }
 
@@ -53,7 +51,7 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  update(time: number, delta: number): void {
+  update(_time: number, delta: number): void {
     // Update all entities
     this.enemies.forEach(enemy => enemy.update(delta));
     this.towers.forEach(tower => tower.update(delta, Array.from(this.enemies.values())));
@@ -175,7 +173,7 @@ export class GameScene extends Phaser.Scene {
       const x = enemyStartX + index * (enemyButtonWidth + 15);
       const y = height - 40;
 
-      const button = this.add.rectangle(x, y, enemyButtonWidth, 60, 0xaa0000)
+      this.add.rectangle(x, y, enemyButtonWidth, 60, 0xaa0000)
         .setStrokeStyle(2, 0xff0000)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
@@ -298,9 +296,9 @@ export class GameScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8);
+    this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8);
 
-    const text = this.add.text(width / 2, height / 2, isWinner ? 'VICTORY!' : 'DEFEAT', {
+    this.add.text(width / 2, height / 2, isWinner ? 'VICTORY!' : 'DEFEAT', {
       fontSize: '72px',
       color: isWinner ? '#00ff00' : '#ff0000',
       fontStyle: 'bold'

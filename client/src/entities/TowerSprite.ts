@@ -26,8 +26,6 @@ export class TowerSprite extends Phaser.GameObjects.Container {
   }
 
   private draw(): void {
-    const config = GAME_CONFIG.TOWER_DATA[this.towerData.type];
-
     this.graphics.clear();
 
     // Tower color based on type

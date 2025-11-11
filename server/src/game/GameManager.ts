@@ -1,6 +1,6 @@
 import { Server, Socket } from 'socket.io';
 import { ServerToClientEvents, ClientToServerEvents, TowerType, EnemyType, Vector2 } from '@shared/types';
-import { GameRoom as Room } from './Room';
+import { Room } from './Room';
 
 export class GameManager {
   private io: Server<ClientToServerEvents, ServerToClientEvents>;

@@ -13,7 +13,7 @@ import {
   GAME_CONFIG
 } from '@shared/types';
 
-export class GameRoom {
+export class Room {
   private id: string;
   private io: Server<ClientToServerEvents, ServerToClientEvents>;
   private state: GameRoom;
