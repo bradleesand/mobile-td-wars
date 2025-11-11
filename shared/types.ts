@@ -19,7 +19,7 @@ export enum TowerType {
   SNIPER = 'SNIPER'
 }
 
-export enum EnemyType {
+export enum MinionType {
   SCOUT = 'SCOUT',
   WARRIOR = 'WARRIOR',
   TANK = 'TANK',
@@ -35,8 +35,8 @@ export interface TowerData {
   specialEffect?: string;
 }
 
-export interface EnemyData {
-  type: EnemyType;
+export interface MinionData {
+  type: MinionType;
   cost: number;
   health: number;
   speed: number;
@@ -60,20 +60,21 @@ export interface Tower {
   level: number;
 }
 
-export interface Enemy {
+export interface Minion {
   id: string;
   senderId: string;
-  type: EnemyType;
+  type: MinionType;
   position: Vector2;
   health: number;
   targetSide: 'left' | 'right';
+  path?: Vector2[]; // Pathfinding waypoints
 }
 
 export interface GameRoom {
   id: string;
   players: Player[];
   towers: Tower[];
-  enemies: Enemy[];
+  minions: Minion[];
   state: GameState;
   createdAt: number;
 }
@@ -84,8 +85,8 @@ export interface ServerToClientEvents {
   playerJoined: (player: Player) => void;
   playerLeft: (playerId: string) => void;
   towerPlaced: (tower: Tower) => void;
-  enemySpawned: (enemy: Enemy) => void;
-  entityUpdated: (entity: Partial<Tower | Enemy> & { id: string }) => void;
+  minionSpawned: (minion: Minion) => void;
+  entityUpdated: (entity: Partial<Tower | Minion> & { id: string }) => void;
   entityDestroyed: (id: string) => void;
   gameOver: (winnerId: string) => void;
   error: (message: string) => void;
@@ -95,7 +96,7 @@ export interface ClientToServerEvents {
   createRoom: (playerName: string, callback: (roomId: string) => void) => void;
   joinRoom: (roomId: string, playerName: string, callback: (success: boolean) => void) => void;
   placeTower: (type: TowerType, position: Vector2) => void;
-  sendEnemy: (type: EnemyType) => void;
+  sendMinion: (type: MinionType) => void;
   ready: () => void;
 }
 
@@ -137,34 +138,36 @@ export const GAME_CONFIG = {
       attackSpeed: 0.33
     }
   } as Record<TowerType, TowerData>,
-  ENEMY_DATA: {
-    [EnemyType.SCOUT]: {
-      type: EnemyType.SCOUT,
+  MINION_DATA: {
+    [MinionType.SCOUT]: {
+      type: MinionType.SCOUT,
       cost: 50,
       health: 50,
       speed: 150,
       reward: 25
     },
-    [EnemyType.WARRIOR]: {
-      type: EnemyType.WARRIOR,
+    [MinionType.WARRIOR]: {
+      type: MinionType.WARRIOR,
       cost: 100,
       health: 150,
       speed: 80,
       reward: 50
     },
-    [EnemyType.TANK]: {
-      type: EnemyType.TANK,
+    [MinionType.TANK]: {
+      type: MinionType.TANK,
       cost: 200,
       health: 400,
       speed: 50,
       reward: 100
     },
-    [EnemyType.BOSS]: {
-      type: EnemyType.BOSS,
+    [MinionType.BOSS]: {
+      type: MinionType.BOSS,
       cost: 500,
       health: 1000,
       speed: 30,
       reward: 250
     }
-  } as Record<EnemyType, EnemyData>
+  } as Record<MinionType, MinionData>,
+  GRID_SIZE: 60, // Grid cell size for tower placement
+  TOWER_SIZE: 50 // Visual size of towers
 };
