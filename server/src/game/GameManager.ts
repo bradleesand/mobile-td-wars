@@ -15,11 +15,12 @@ export class GameManager {
     const roomId = this.generateRoomId();
     const room = new Room(roomId, this.io);
 
-    room.addPlayer(socket, playerName, 'left');
-    this.rooms.set(roomId, room);
+    // Join room BEFORE addPlayer so socket receives the initial gameState broadcast
+    socket.join(roomId);
     this.socketToRoom.set(socket.id, roomId);
 
-    socket.join(roomId);
+    room.addPlayer(socket, playerName, 'left');
+    this.rooms.set(roomId, room);
 
     return roomId;
   }
@@ -35,11 +36,12 @@ export class GameManager {
       return false;
     }
 
-    const side = room.getPlayerCount() === 0 ? 'left' : 'right';
-    room.addPlayer(socket, playerName, side);
+    // Join room BEFORE addPlayer so socket receives the gameState broadcast
+    socket.join(roomId);
     this.socketToRoom.set(socket.id, roomId);
 
-    socket.join(roomId);
+    const side = room.getPlayerCount() === 0 ? 'left' : 'right';
+    room.addPlayer(socket, playerName, side);
 
     // Players must click "Ready" to start the game
     // (no auto-start)
