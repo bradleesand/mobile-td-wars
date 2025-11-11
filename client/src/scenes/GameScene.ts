@@ -30,6 +30,8 @@ export class GameScene extends Phaser.Scene {
   private gold: number = GAME_CONFIG.STARTING_GOLD;
   private health: number = GAME_CONFIG.BASE_HEALTH;
   private isReady: boolean = false;
+  private showPaths: boolean = false;
+  private pathGraphics?: Phaser.GameObjects.Graphics;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -53,6 +55,10 @@ export class GameScene extends Phaser.Scene {
     // UI
     this.createUI();
     this.createReadyButton();
+    this.createPathToggle();
+
+    // Path visualization graphics
+    this.pathGraphics = this.add.graphics();
 
     // Network setup
     this.networkManager = NetworkManager.getInstance();
@@ -68,6 +74,9 @@ export class GameScene extends Phaser.Scene {
     // Update all entities
     this.minions.forEach(minion => minion.update(delta));
     this.towers.forEach(tower => tower.update(delta, Array.from(this.minions.values())));
+
+    // Update path visualization
+    this.drawPaths();
   }
 
   private createBattlefield(): void {
@@ -330,6 +339,31 @@ export class GameScene extends Phaser.Scene {
     .setVisible(true);
   }
 
+  private createPathToggle(): void {
+    const width = this.cameras.main.width;
+
+    // Create toggle button in top-right corner
+    const toggleButton = this.add.text(width - 20, 70, 'Show Paths', {
+      fontSize: '18px',
+      color: '#ffffff',
+      backgroundColor: '#333333',
+      padding: { x: 10, y: 5 }
+    })
+    .setOrigin(1, 0)
+    .setInteractive({ useHandCursor: true })
+    .on('pointerdown', () => {
+      this.showPaths = !this.showPaths;
+      toggleButton.setBackgroundColor(this.showPaths ? '#00aa00' : '#333333');
+      toggleButton.setText(this.showPaths ? 'Hide Paths' : 'Show Paths');
+    })
+    .on('pointerover', () => {
+      toggleButton.setBackgroundColor(this.showPaths ? '#00cc00' : '#555555');
+    })
+    .on('pointerout', () => {
+      toggleButton.setBackgroundColor(this.showPaths ? '#00aa00' : '#333333');
+    });
+  }
+
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
     if (!this.selectedTowerType || !this.playerSide) return;
 
@@ -538,6 +572,40 @@ export class GameScene extends Phaser.Scene {
         const affordable = this.gold >= cost;
         button.setAlpha(affordable ? 1 : 0.5);
       }
+    });
+  }
+
+  private drawPaths(): void {
+    if (!this.pathGraphics) return;
+
+    this.pathGraphics.clear();
+
+    if (!this.showPaths) return;
+
+    // Draw path for each minion
+    this.minions.forEach(minionSprite => {
+      const minionData = minionSprite.getData();
+      if (!minionData.path || minionData.path.length === 0) return;
+
+      // Draw path as a line
+      this.pathGraphics!.lineStyle(2, 0x00ffff, 0.6);
+
+      // Start from minion's current position
+      this.pathGraphics!.beginPath();
+      this.pathGraphics!.moveTo(minionData.position.x, minionData.position.y);
+
+      // Draw line through all waypoints
+      minionData.path.forEach(waypoint => {
+        this.pathGraphics!.lineTo(waypoint.x, waypoint.y);
+      });
+
+      this.pathGraphics!.strokePath();
+
+      // Draw waypoint markers
+      minionData.path.forEach(waypoint => {
+        this.pathGraphics!.fillStyle(0x00ffff, 0.8);
+        this.pathGraphics!.fillCircle(waypoint.x, waypoint.y, 3);
+      });
     });
   }
 
