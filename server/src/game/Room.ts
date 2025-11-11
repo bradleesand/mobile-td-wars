@@ -219,16 +219,26 @@ export class Room {
     const centerLinePos = path[path.length - 1];
     const targetX = targetSide === 'left' ? 100 : GAME_CONFIG.CANVAS_WIDTH - 100;
     const targetY = GAME_CONFIG.CANVAS_HEIGHT / 2;
+    const basePosition = { x: targetX, y: targetY };
 
     const pathToBase = this.pathfinding.findPath(
       centerLinePos,
-      { x: targetX, y: targetY },
+      basePosition,
       this.state.towers
     );
 
     // Add phase 2 waypoints (skip first one as it's the center line position we already have)
     if (pathToBase.length > 1) {
       path.push(...pathToBase.slice(1));
+    } else if (pathToBase.length === 0) {
+      // No path found - add direct path to base as fallback
+      path.push(basePosition);
+    }
+
+    // Ensure the final waypoint is exactly at the base position
+    const lastWaypoint = path[path.length - 1];
+    if (lastWaypoint.x !== basePosition.x || lastWaypoint.y !== basePosition.y) {
+      path.push(basePosition);
     }
 
     // Create minion
@@ -302,19 +312,9 @@ export class Room {
           minion.position.x = target.x;
           minion.position.y = target.y;
           minion.path.shift(); // Remove reached waypoint
-        } else {
-          // Move towards waypoint
-          minion.position.x += (dx / distance) * moveSpeed;
-          minion.position.y += (dy / distance) * moveSpeed;
-        }
 
-        // Check if reached final destination (no more waypoints and close to base)
-        if (minion.path.length === 0) {
-          const targetBaseX = minion.targetSide === 'left' ? 100 : GAME_CONFIG.CANVAS_WIDTH - 100;
-          const distToBase = Math.abs(minion.position.x - targetBaseX);
-
-          if (distToBase < 50) {
-            // Reached base - deal damage
+          // If no more waypoints, minion reached the base - deal damage and remove
+          if (minion.path.length === 0) {
             const targetPlayer = this.state.players.find(p => p.side === minion.targetSide);
             if (targetPlayer) {
               targetPlayer.health -= 10;
@@ -325,6 +325,10 @@ export class Room {
             }
             minionsToRemove.push(minion.id);
           }
+        } else {
+          // Move towards waypoint
+          minion.position.x += (dx / distance) * moveSpeed;
+          minion.position.y += (dy / distance) * moveSpeed;
         }
       } else {
         // Fallback: simple horizontal movement if no path
