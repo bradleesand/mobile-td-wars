@@ -34,6 +34,7 @@ export class NetworkManager {
 
     // Set up event forwarding
     this.socket.on('gameState', (room) => {
+      console.log('[NetworkManager] Received gameState from socket, forwarding to listeners. Listener count:', this.listeners.get('gameState')?.length || 0);
       this.emit('gameState', room);
     });
 

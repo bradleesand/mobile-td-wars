@@ -49,11 +49,15 @@ export class Room {
     this.state.players.push(player);
     this.playerSockets.set(socket.id, socket);
 
+    console.log(`[Room ${this.id}] Player ${name} added. Total players: ${this.state.players.length}`);
+
     // Send gameState directly to joining socket first (ensures they get it even if scene isn't ready yet)
     socket.emit('gameState', this.state);
+    console.log(`[Room ${this.id}] Sent direct gameState to ${name}`);
 
     // Also broadcast to notify other players
     this.broadcastGameState();
+    console.log(`[Room ${this.id}] Broadcasted gameState to room`);
   }
 
   removePlayer(socketId: string): void {
