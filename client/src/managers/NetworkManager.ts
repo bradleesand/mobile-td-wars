@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import { ServerToClientEvents, ClientToServerEvents, TowerType, EnemyType, Vector2 } from '@shared/types';
+import { ServerToClientEvents, ClientToServerEvents, TowerType, MinionType, Vector2 } from '@shared/types';
 
 export class NetworkManager {
   private static instance: NetworkManager;
@@ -53,8 +53,8 @@ export class NetworkManager {
       this.emit('towerPlaced', tower);
     });
 
-    this.socket.on('enemySpawned', (enemy) => {
-      this.emit('enemySpawned', enemy);
+    this.socket.on('minionSpawned', (minion) => {
+      this.emit('minionSpawned', minion);
     });
 
     this.socket.on('entityUpdated', (entity) => {
@@ -97,9 +97,9 @@ export class NetworkManager {
     this.socket.emit('placeTower', type, position);
   }
 
-  sendEnemy(type: EnemyType): void {
+  sendMinion(type: MinionType): void {
     if (!this.socket) return;
-    this.socket.emit('sendEnemy', type);
+    this.socket.emit('sendMinion', type);
   }
 
   ready(): void {
