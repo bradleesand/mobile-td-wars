@@ -20,6 +20,7 @@ export class Room {
   private updateInterval?: NodeJS.Timeout;
   private goldInterval?: NodeJS.Timeout;
   private playerSockets: Map<string, Socket> = new Map();
+  private updateCounter: number = 0;
 
   constructor(roomId: string, io: Server<ClientToServerEvents, ServerToClientEvents>) {
     this.id = roomId;
@@ -243,9 +244,11 @@ export class Room {
       this.io.to(this.id).emit('entityDestroyed', id);
     });
 
-    // Broadcast state periodically (every 10 frames)
-    if (Math.random() < 0.33) {
+    // Broadcast state every 5 frames (6 times per second at 30 FPS)
+    this.updateCounter++;
+    if (this.updateCounter >= 5) {
       this.broadcastGameState();
+      this.updateCounter = 0;
     }
   }
 
@@ -253,6 +256,8 @@ export class Room {
     this.state.players.forEach(player => {
       player.gold += GAME_CONFIG.GOLD_PER_SECOND;
     });
+    // Broadcast updated gold to all clients
+    this.broadcastGameState();
   }
 
   private endGame(winnerId: string): void {
