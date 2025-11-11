@@ -224,6 +224,11 @@ export class Room {
 
       // Check tower attacks
       this.state.towers.forEach(tower => {
+        // Skip if tower would attack friendly enemies
+        if (tower.ownerId === enemy.senderId) {
+          return; // Don't attack your own minions
+        }
+
         const towerData = GAME_CONFIG.TOWER_DATA[tower.type];
         const distance = Math.sqrt(
           Math.pow(tower.position.x - enemy.position.x, 2) +
