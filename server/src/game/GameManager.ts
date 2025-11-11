@@ -100,6 +100,12 @@ export class GameManager {
   }
 
   private generateRoomId(): string {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
+    // Use character set excluding confusing characters: O, 0, I, 1
+    const chars = '234567892ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let roomId = '';
+    for (let i = 0; i < 6; i++) {
+      roomId += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return roomId;
   }
 }

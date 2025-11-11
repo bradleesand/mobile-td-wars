@@ -117,9 +117,12 @@ export class MainMenuScene extends Phaser.Scene {
 
     // Add input event listener
     this.roomIdInput.addEventListener('input', () => {
-      // Convert to uppercase
       if (this.roomIdInput) {
-        this.roomIdInput.value = this.roomIdInput.value.toUpperCase();
+        // Convert to uppercase and filter out confusing characters (O, 0, I, 1)
+        const filtered = this.roomIdInput.value
+          .toUpperCase()
+          .replace(/[O0I1]/g, '');
+        this.roomIdInput.value = filtered;
       }
       this.updateJoinButton();
     });
