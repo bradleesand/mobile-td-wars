@@ -6,6 +6,7 @@ import { TowerType, EnemyType, GAME_CONFIG, GameRoom, Tower, Enemy } from '@shar
 
 export class GameScene extends Phaser.Scene {
   private networkManager!: NetworkManager;
+  private roomId!: string;
   private playerName!: string;
   private playerId?: string;
   private playerSide?: 'left' | 'right';
@@ -28,6 +29,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   init(data: { roomId: string; playerName: string }): void {
+    this.roomId = data.roomId;
     this.playerName = data.playerName;
   }
 
@@ -111,7 +113,7 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(1, 0.5);
 
     // Side indicator (will be updated when side is known)
-    this.sideIndicatorText = this.add.text(width / 2, 30, 'Waiting for opponent...', {
+    this.sideIndicatorText = this.add.text(width / 2, 30, `Room Code: ${this.roomId}`, {
       fontSize: '28px',
       color: '#ffff00',
       fontStyle: 'bold'
@@ -129,14 +131,17 @@ export class GameScene extends Phaser.Scene {
     // Tower buttons (left side)
     const towerTypes = [TowerType.ARCHER, TowerType.CANNON, TowerType.MAGIC, TowerType.SNIPER];
     const buttonWidth = 180;
-    const towerStartX = 40;
+    const buttonHeight = 70;
+    const buttonSpacing = 10;
+    const totalTowerWidth = (buttonWidth * towerTypes.length) + (buttonSpacing * (towerTypes.length - 1));
+    const towerStartX = (width / 4) - (totalTowerWidth / 2) + (buttonWidth / 2);
 
     towerTypes.forEach((type, index) => {
       const data = GAME_CONFIG.TOWER_DATA[type];
-      const x = towerStartX + index * (buttonWidth + 10);
+      const x = towerStartX + index * (buttonWidth + buttonSpacing);
       const y = height - 100;
 
-      const button = this.add.rectangle(x, y, buttonWidth, 80, 0x00aa00)
+      const button = this.add.rectangle(x, y, buttonWidth, buttonHeight, 0x00aa00)
         .setStrokeStyle(2, 0x00ff00)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
@@ -178,15 +183,15 @@ export class GameScene extends Phaser.Scene {
 
     // Enemy buttons (right side)
     const enemyTypes = [EnemyType.SCOUT, EnemyType.WARRIOR, EnemyType.TANK, EnemyType.BOSS];
-    const enemyButtonWidth = 200;
-    const enemyStartX = width / 2 + 40;
+    const totalEnemyWidth = (buttonWidth * enemyTypes.length) + (buttonSpacing * (enemyTypes.length - 1));
+    const enemyStartX = (width * 3 / 4) - (totalEnemyWidth / 2) + (buttonWidth / 2);
 
     enemyTypes.forEach((type, index) => {
       const data = GAME_CONFIG.ENEMY_DATA[type];
-      const x = enemyStartX + index * (enemyButtonWidth + 10);
+      const x = enemyStartX + index * (buttonWidth + buttonSpacing);
       const y = height - 100;
 
-      this.add.rectangle(x, y, enemyButtonWidth, 60, 0xaa0000)
+      this.add.rectangle(x, y, buttonWidth, buttonHeight, 0xaa0000)
         .setStrokeStyle(2, 0xff0000)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
@@ -281,7 +286,7 @@ export class GameScene extends Phaser.Scene {
         this.playerSide = player.side;
         this.gold = player.gold;
         this.health = player.health;
-        this.updateUI();
+        this.updateUI(room.state, room.players.length);
       }
 
       // Show ready button if waiting for players
@@ -347,14 +352,21 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private updateUI(): void {
+  private updateUI(gameState?: string, playerCount?: number): void {
     this.goldText.setText(`Gold: ${this.gold}`);
     this.healthText.setText(`Health: ${this.health}`);
 
-    if (this.playerSide) {
+    // Show room code when waiting, show side when playing
+    if (gameState === 'PLAYING' && this.playerSide) {
       const sideText = this.playerSide === 'left' ? '← YOUR SIDE (LEFT)' : 'YOUR SIDE (RIGHT) →';
       this.sideIndicatorText.setText(sideText);
       this.sideIndicatorText.setColor('#00ff00');
+    } else if (playerCount === 1) {
+      this.sideIndicatorText.setText(`Room Code: ${this.roomId} - Waiting for opponent...`);
+      this.sideIndicatorText.setColor('#ffff00');
+    } else if (playerCount === 2) {
+      this.sideIndicatorText.setText(`Room Code: ${this.roomId} - Click READY to start!`);
+      this.sideIndicatorText.setColor('#ffff00');
     }
   }
 

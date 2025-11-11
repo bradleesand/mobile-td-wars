@@ -94,7 +94,6 @@ export class MainMenuScene extends Phaser.Scene {
 
     networkManager.createRoom(playerName, (roomId: string) => {
       console.log('Room created:', roomId);
-      alert(`Room created! Share this ID with your opponent: ${roomId}`);
       this.scene.start('GameScene', { roomId, playerName });
     });
   }
