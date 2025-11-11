@@ -1,17 +1,17 @@
 import Phaser from 'phaser';
-import { Enemy, EnemyType, GAME_CONFIG } from '@shared/types';
+import { Minion, MinionType, GAME_CONFIG } from '@shared/types';
 
-export class EnemySprite extends Phaser.GameObjects.Container {
-  private enemyData: Enemy;
+export class MinionSprite extends Phaser.GameObjects.Container {
+  private minionData: Minion;
   private graphics: Phaser.GameObjects.Graphics;
   private healthBar: Phaser.GameObjects.Graphics;
 
-  constructor(scene: Phaser.Scene, data: Enemy) {
+  constructor(scene: Phaser.Scene, data: Minion) {
     super(scene, data.position.x, data.position.y);
 
-    this.enemyData = data;
+    this.minionData = data;
 
-    // Create enemy visual
+    // Create minion visual
     this.graphics = scene.add.graphics();
     this.add(this.graphics);
 
@@ -23,34 +23,34 @@ export class EnemySprite extends Phaser.GameObjects.Container {
   }
 
   private draw(): void {
-    const config = GAME_CONFIG.ENEMY_DATA[this.enemyData.type];
+    const config = GAME_CONFIG.MINION_DATA[this.minionData.type];
 
     this.graphics.clear();
 
-    // Enemy color and size based on type
+    // Minion color and size based on type
     let color = 0xff0000;
     let size = 15;
 
-    switch (this.enemyData.type) {
-      case EnemyType.SCOUT:
+    switch (this.minionData.type) {
+      case MinionType.SCOUT:
         color = 0xff0000;
         size = 12;
         break;
-      case EnemyType.WARRIOR:
+      case MinionType.WARRIOR:
         color = 0xff4444;
         size = 18;
         break;
-      case EnemyType.TANK:
+      case MinionType.TANK:
         color = 0xff8800;
         size = 25;
         break;
-      case EnemyType.BOSS:
+      case MinionType.BOSS:
         color = 0xff00ff;
         size = 35;
         break;
     }
 
-    // Draw enemy body
+    // Draw minion body
     this.graphics.fillStyle(color, 1);
     this.graphics.fillCircle(0, 0, size);
 
@@ -65,16 +65,16 @@ export class EnemySprite extends Phaser.GameObjects.Container {
     this.healthBar.fillStyle(0xff0000, 1);
     this.healthBar.fillRect(-size, -size - 10, size * 2, 4);
     this.healthBar.fillStyle(0x00ff00, 1);
-    this.healthBar.fillRect(-size, -size - 10, size * 2 * (this.enemyData.health / maxHealth), 4);
+    this.healthBar.fillRect(-size, -size - 10, size * 2 * (this.minionData.health / maxHealth), 4);
   }
 
   update(delta: number): void {
     // Move towards target base
-    const config = GAME_CONFIG.ENEMY_DATA[this.enemyData.type];
+    const config = GAME_CONFIG.MINION_DATA[this.minionData.type];
     const speed = config.speed * (delta / 1000);
 
     // Move horizontally towards target side
-    if (this.enemyData.targetSide === 'left') {
+    if (this.minionData.targetSide === 'left') {
       this.x -= speed;
     } else {
       this.x += speed;
@@ -83,9 +83,9 @@ export class EnemySprite extends Phaser.GameObjects.Container {
     // In a real implementation, this would sync with server
   }
 
-  updateData(data: Partial<Enemy>): void {
+  updateData(data: Partial<Minion>): void {
     if (data.health !== undefined) {
-      this.enemyData.health = data.health;
+      this.minionData.health = data.health;
       this.draw();
     }
 
@@ -95,7 +95,7 @@ export class EnemySprite extends Phaser.GameObjects.Container {
     }
   }
 
-  getData(): Enemy {
-    return this.enemyData;
+  getData(): Minion {
+    return this.minionData;
   }
 }

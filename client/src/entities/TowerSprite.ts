@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { Tower, TowerType, GAME_CONFIG } from '@shared/types';
-import { EnemySprite } from './EnemySprite';
+import { MinionSprite } from './MinionSprite';
 
 export class TowerSprite extends Phaser.GameObjects.Container {
   private towerData: Tower;
@@ -70,15 +70,15 @@ export class TowerSprite extends Phaser.GameObjects.Container {
     this.healthBar.fillRect(-20, -40, 40 * (this.towerData.health / 100), 4);
   }
 
-  update(delta: number, enemies: EnemySprite[]): void {
+  update(delta: number, minions: MinionSprite[]): void {
     const config = GAME_CONFIG.TOWER_DATA[this.towerData.type];
     const attackCooldown = 1000 / config.attackSpeed;
 
     this.lastAttackTime += delta;
 
     if (this.lastAttackTime >= attackCooldown) {
-      // Find enemies in range
-      const target = this.findTarget(enemies, config.range);
+      // Find minions in range
+      const target = this.findTarget(minions, config.range);
 
       if (target) {
         this.attack(target);
@@ -87,29 +87,29 @@ export class TowerSprite extends Phaser.GameObjects.Container {
     }
   }
 
-  private findTarget(enemies: EnemySprite[], range: number): EnemySprite | null {
-    let closestEnemy: EnemySprite | null = null;
+  private findTarget(minions: MinionSprite[], range: number): MinionSprite | null {
+    let closestMinion: MinionSprite | null = null;
     let closestDistance = range;
 
-    for (const enemy of enemies) {
-      // Only target enemies NOT sent by this tower's owner
-      const enemyData = enemy.getData();
-      if (enemyData.senderId === this.towerData.ownerId) {
-        continue; // Skip friendly enemies
+    for (const minion of minions) {
+      // Only target minions NOT sent by this tower's owner
+      const minionData = minion.getData();
+      if (minionData.senderId === this.towerData.ownerId) {
+        continue; // Skip friendly minions
       }
 
-      const distance = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
+      const distance = Phaser.Math.Distance.Between(this.x, this.y, minion.x, minion.y);
 
       if (distance <= range && distance < closestDistance) {
-        closestEnemy = enemy;
+        closestMinion = minion;
         closestDistance = distance;
       }
     }
 
-    return closestEnemy;
+    return closestMinion;
   }
 
-  private attack(target: EnemySprite): void {
+  private attack(target: MinionSprite): void {
     // Draw projectile
     const graphics = this.scene.add.graphics();
     graphics.lineStyle(3, 0xffff00, 1);

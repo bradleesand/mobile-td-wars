@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { NetworkManager } from '../managers/NetworkManager';
 import { TowerSprite } from '../entities/TowerSprite';
-import { EnemySprite } from '../entities/EnemySprite';
+import { MinionSprite } from '../entities/MinionSprite';
 import { TowerType, MinionType, GAME_CONFIG, GameRoom, Tower, Minion } from '@shared/types';
 
 export class GameScene extends Phaser.Scene {
