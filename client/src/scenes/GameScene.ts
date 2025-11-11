@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { NetworkManager } from '../managers/NetworkManager';
 import { TowerSprite } from '../entities/TowerSprite';
 import { EnemySprite } from '../entities/EnemySprite';
-import { TowerType, EnemyType, GAME_CONFIG, GameRoom, Tower, Enemy } from '@shared/types';
+import { TowerType, MinionType, GAME_CONFIG, GameRoom, Tower, Minion } from '@shared/types';
 
 export class GameScene extends Phaser.Scene {
   private networkManager!: NetworkManager;
@@ -12,7 +12,7 @@ export class GameScene extends Phaser.Scene {
   private playerSide?: 'left' | 'right';
 
   private towers: Map<string, TowerSprite> = new Map();
-  private enemies: Map<string, EnemySprite> = new Map();
+  private minions: Map<string, EnemySprite> = new Map();
 
   private goldText!: Phaser.GameObjects.Text;
   private healthText!: Phaser.GameObjects.Text;
@@ -22,7 +22,7 @@ export class GameScene extends Phaser.Scene {
   private statusText?: Phaser.GameObjects.Text; // Status text below ready button
   private selectedTowerType: TowerType | null = null;
   private towerButtons: Phaser.GameObjects.Rectangle[] = [];
-  private enemyButtons: Phaser.GameObjects.Rectangle[] = [];
+  private minionButtons: Phaser.GameObjects.Rectangle[] = [];
   private buttonsEnabled: boolean = false;
 
   private gold: number = GAME_CONFIG.STARTING_GOLD;
@@ -64,8 +64,8 @@ export class GameScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     // Update all entities
-    this.enemies.forEach(enemy => enemy.update(delta));
-    this.towers.forEach(tower => tower.update(delta, Array.from(this.enemies.values())));
+    this.minions.forEach(minion => minion.update(delta));
+    this.towers.forEach(tower => tower.update(delta, Array.from(this.minions.values())));
   }
 
   private createBattlefield(): void {
@@ -223,20 +223,20 @@ export class GameScene extends Phaser.Scene {
       }).setOrigin(0.5).setAlpha(0.4);
     });
 
-    // Right section - Send Enemies
-    this.add.text(width * 3 / 4, height - 180, 'SEND ENEMIES', {
+    // Right section - Send Minions
+    this.add.text(width * 3 / 4, height - 180, 'SEND MINIONS', {
       fontSize: '20px',
       color: '#ff0000'
     }).setOrigin(0.5);
 
-    // Enemy buttons (right side)
-    const enemyTypes = [EnemyType.SCOUT, EnemyType.WARRIOR, EnemyType.TANK, EnemyType.BOSS];
-    const totalEnemyWidth = (buttonWidth * enemyTypes.length) + (buttonSpacing * (enemyTypes.length - 1));
-    const enemyStartX = (width * 3 / 4) - (totalEnemyWidth / 2) + (buttonWidth / 2);
+    // Minion buttons (right side)
+    const minionTypes = [MinionType.SCOUT, MinionType.WARRIOR, MinionType.TANK, MinionType.BOSS];
+    const totalMinionWidth = (buttonWidth * minionTypes.length) + (buttonSpacing * (minionTypes.length - 1));
+    const minionStartX = (width * 3 / 4) - (totalMinionWidth / 2) + (buttonWidth / 2);
 
-    enemyTypes.forEach((type, index) => {
-      const data = GAME_CONFIG.ENEMY_DATA[type];
-      const x = enemyStartX + index * (buttonWidth + buttonSpacing);
+    minionTypes.forEach((type, index) => {
+      const data = GAME_CONFIG.MINION_DATA[type];
+      const x = minionStartX + index * (buttonWidth + buttonSpacing);
       const y = height - 100;
 
       const button = this.add.rectangle(x, y, buttonWidth, buttonHeight, 0xaa0000)
@@ -244,11 +244,11 @@ export class GameScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
           if (!this.buttonsEnabled) return; // Ignore clicks if disabled
-          this.sendEnemy(type);
+          this.sendMinion(type);
         });
 
       // Store reference and set initial disabled state
-      this.enemyButtons.push(button);
+      this.minionButtons.push(button);
       button.setAlpha(0.4); // Visually disabled
 
       this.add.text(x, y - 15, type, {
@@ -330,11 +330,11 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private sendEnemy(type: EnemyType): void {
-    const enemyData = GAME_CONFIG.ENEMY_DATA[type];
+  private sendMinion(type: MinionType): void {
+    const minionData = GAME_CONFIG.MINION_DATA[type];
 
-    if (this.gold >= enemyData.cost) {
-      this.networkManager.sendEnemy(type);
+    if (this.gold >= minionData.cost) {
+      this.networkManager.sendMinion(type);
       // Gold will be updated by server via gameState event
     } else {
       console.log('Not enough gold!');
@@ -366,14 +366,14 @@ export class GameScene extends Phaser.Scene {
         // Enable all gameplay buttons
         this.buttonsEnabled = true;
         this.towerButtons.forEach(btn => btn.setAlpha(1));
-        this.enemyButtons.forEach(btn => btn.setAlpha(1));
+        this.minionButtons.forEach(btn => btn.setAlpha(1));
 
         // Enable all associated text by finding children near button positions
         this.children.list.forEach(child => {
           if (child instanceof Phaser.GameObjects.Text) {
             const isNearButton = this.towerButtons.some(btn =>
               Math.abs(child.x - btn.x) < 100 && Math.abs(child.y - btn.y) < 50
-            ) || this.enemyButtons.some(btn =>
+            ) || this.minionButtons.some(btn =>
               Math.abs(child.x - btn.x) < 100 && Math.abs(child.y - btn.y) < 50
             );
             if (isNearButton) {
@@ -400,14 +400,14 @@ export class GameScene extends Phaser.Scene {
         }
       });
 
-      // Update all enemies
-      room.enemies.forEach(enemyData => {
-        if (!this.enemies.has(enemyData.id)) {
-          const enemy = new EnemySprite(this, enemyData);
-          this.enemies.set(enemyData.id, enemy);
-          this.add.existing(enemy);
+      // Update all minions
+      room.minions.forEach(minionData => {
+        if (!this.minions.has(minionData.id)) {
+          const minion = new EnemySprite(this, minionData);
+          this.minions.set(minionData.id, minion);
+          this.add.existing(minion);
         } else {
-          this.enemies.get(enemyData.id)?.updateData(enemyData);
+          this.minions.get(minionData.id)?.updateData(minionData);
         }
       });
     });
@@ -420,11 +420,11 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    this.networkManager.on('enemySpawned', (enemy: Enemy) => {
-      if (!this.enemies.has(enemy.id)) {
-        const enemySprite = new EnemySprite(this, enemy);
-        this.enemies.set(enemy.id, enemySprite);
-        this.add.existing(enemySprite);
+    this.networkManager.on('minionSpawned', (minion: Minion) => {
+      if (!this.minions.has(minion.id)) {
+        const minionSprite = new EnemySprite(this, minion);
+        this.minions.set(minion.id, minionSprite);
+        this.add.existing(minionSprite);
       }
     });
 
@@ -433,9 +433,9 @@ export class GameScene extends Phaser.Scene {
         this.towers.get(id)?.destroy();
         this.towers.delete(id);
       }
-      if (this.enemies.has(id)) {
-        this.enemies.get(id)?.destroy();
-        this.enemies.delete(id);
+      if (this.minions.has(id)) {
+        this.minions.get(id)?.destroy();
+        this.minions.delete(id);
       }
     });
 
