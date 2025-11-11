@@ -197,18 +197,23 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   private joinRoom(roomId: string, playerName: string): void {
-    // Clean up input before switching scenes
-    this.cleanupInput();
-
     const networkManager = NetworkManager.getInstance();
     networkManager.connect();
 
     networkManager.joinRoom(roomId, playerName, (success: boolean) => {
       if (success) {
         console.log('Joined room:', roomId);
+        // Clean up input only on success
+        this.cleanupInput();
         this.scene.start('GameScene', { roomId, playerName });
       } else {
         alert('Failed to join room. Room may not exist or is full.');
+        // Keep input field so user can try again - clear it and refocus
+        if (this.roomIdInput) {
+          this.roomIdInput.value = '';
+          this.roomIdInput.focus();
+          this.updateJoinButton();
+        }
       }
     });
   }
