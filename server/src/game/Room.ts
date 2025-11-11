@@ -86,12 +86,31 @@ export class Room {
       return;
     }
 
+    // Validate position is snapped to grid
+    const gridSize = GAME_CONFIG.GRID_SIZE;
+    const isSnapped = position.x % gridSize === 0 && position.y % gridSize === 0;
+
+    if (!isSnapped) {
+      this.playerSockets.get(playerId)?.emit('error', 'Invalid grid position');
+      return;
+    }
+
     // Check if position is on player's side
     const isValidSide = (player.side === 'left' && position.x < GAME_CONFIG.CANVAS_WIDTH / 2) ||
                        (player.side === 'right' && position.x > GAME_CONFIG.CANVAS_WIDTH / 2);
 
     if (!isValidSide) {
       this.playerSockets.get(playerId)?.emit('error', 'Invalid position');
+      return;
+    }
+
+    // Check if a tower already exists at this grid position
+    const existingTower = this.state.towers.find(t =>
+      t.position.x === position.x && t.position.y === position.y
+    );
+
+    if (existingTower) {
+      this.playerSockets.get(playerId)?.emit('error', 'Position already occupied');
       return;
     }
 

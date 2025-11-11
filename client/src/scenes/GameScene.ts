@@ -12,7 +12,7 @@ export class GameScene extends Phaser.Scene {
   private playerSide?: 'left' | 'right';
 
   private towers: Map<string, TowerSprite> = new Map();
-  private minions: Map<string, EnemySprite> = new Map();
+  private minions: Map<string, MinionSprite> = new Map();
 
   private goldText!: Phaser.GameObjects.Text;
   private healthText!: Phaser.GameObjects.Text;
@@ -71,6 +71,21 @@ export class GameScene extends Phaser.Scene {
   private createBattlefield(): void {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
+
+    // Draw grid
+    const gridSize = GAME_CONFIG.GRID_SIZE;
+    const gridGraphics = this.add.graphics();
+    gridGraphics.lineStyle(1, 0x333333, 0.3);
+
+    // Vertical lines
+    for (let x = 0; x <= width; x += gridSize) {
+      gridGraphics.lineBetween(x, 0, x, height);
+    }
+
+    // Horizontal lines
+    for (let y = 0; y <= height; y += gridSize) {
+      gridGraphics.lineBetween(0, y, width, y);
+    }
 
     // Draw center line
     const graphics = this.add.graphics();
@@ -322,7 +337,12 @@ export class GameScene extends Phaser.Scene {
       const towerData = GAME_CONFIG.TOWER_DATA[this.selectedTowerType];
 
       if (this.gold >= towerData.cost) {
-        this.networkManager.placeTower(this.selectedTowerType, { x: pointer.x, y: pointer.y });
+        // Snap to grid
+        const gridSize = GAME_CONFIG.GRID_SIZE;
+        const snappedX = Math.round(pointer.x / gridSize) * gridSize;
+        const snappedY = Math.round(pointer.y / gridSize) * gridSize;
+
+        this.networkManager.placeTower(this.selectedTowerType, { x: snappedX, y: snappedY });
         // Gold will be updated by server via gameState event
       } else {
         console.log('Not enough gold!');
