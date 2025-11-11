@@ -5,6 +5,7 @@ export class NetworkManager {
   private static instance: NetworkManager;
   private socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null;
   private listeners: Map<string, Function[]> = new Map();
+  private lastGameState: any = null; // Buffer last gameState to handle race conditions
 
   private constructor() {}
 
@@ -35,6 +36,8 @@ export class NetworkManager {
     // Set up event forwarding
     this.socket.on('gameState', (room) => {
       console.log('[NetworkManager] Received gameState from socket, forwarding to listeners. Listener count:', this.listeners.get('gameState')?.length || 0);
+      // Buffer the latest gameState to handle race conditions
+      this.lastGameState = room;
       this.emit('gameState', room);
     });
 
@@ -109,6 +112,12 @@ export class NetworkManager {
       this.listeners.set(event, []);
     }
     this.listeners.get(event)!.push(callback);
+
+    // If registering for gameState and we have a buffered state, deliver it immediately
+    if (event === 'gameState' && this.lastGameState) {
+      console.log('[NetworkManager] Delivering buffered gameState to new listener');
+      callback(this.lastGameState);
+    }
   }
 
   off(event: string, callback: Function): void {
