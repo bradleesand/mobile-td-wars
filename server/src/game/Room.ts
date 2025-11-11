@@ -89,6 +89,16 @@ export class Room {
       return;
     }
 
+    // Validate position is within playing field bounds
+    const minBound = 100; // Keep towers away from edges
+    const maxX = GAME_CONFIG.CANVAS_WIDTH - minBound;
+    const maxY = GAME_CONFIG.CANVAS_HEIGHT - 200; // Keep away from bottom UI
+
+    if (position.x < minBound || position.x > maxX || position.y < minBound || position.y > maxY) {
+      this.playerSockets.get(playerId)?.emit('error', 'Tower must be placed within playing field');
+      return;
+    }
+
     // Validate position is snapped to grid
     const gridSize = GAME_CONFIG.GRID_SIZE;
     const isSnapped = position.x % gridSize === 0 && position.y % gridSize === 0;
@@ -177,27 +187,47 @@ export class Room {
     // - Right side minions spawn at top edge
     let spawnX: number;
     let spawnY: number;
+    const centerX = GAME_CONFIG.CANVAS_WIDTH / 2;
 
     if (player.side === 'left') {
       // Spawn at bottom edge, somewhere along the left half
-      spawnX = Math.random() * (GAME_CONFIG.CANVAS_WIDTH / 2 - 200) + 100;
+      spawnX = Math.random() * (centerX - 200) + 100;
       spawnY = GAME_CONFIG.CANVAS_HEIGHT - 100;
     } else {
       // Spawn at top edge, somewhere along the right half
-      spawnX = Math.random() * (GAME_CONFIG.CANVAS_WIDTH / 2 - 200) + GAME_CONFIG.CANVAS_WIDTH / 2 + 100;
+      spawnX = Math.random() * (centerX - 200) + centerX + 100;
       spawnY = 100;
     }
 
-    // Calculate target position (enemy base)
+    // Create two-phase path:
+    // Phase 1: Follow perimeter to center line
+    // Phase 2: Pathfind from center line to enemy base
+    const path: Vector2[] = [];
+
+    // Phase 1: Move along perimeter to center line
+    if (player.side === 'left') {
+      // Move along bottom edge to center
+      path.push({ x: centerX, y: GAME_CONFIG.CANVAS_HEIGHT - 100 });
+    } else {
+      // Move along top edge to center
+      path.push({ x: centerX, y: 100 });
+    }
+
+    // Phase 2: Pathfind from center line to enemy base
+    const centerLinePos = path[path.length - 1];
     const targetX = targetSide === 'left' ? 100 : GAME_CONFIG.CANVAS_WIDTH - 100;
     const targetY = GAME_CONFIG.CANVAS_HEIGHT / 2;
 
-    // Calculate path from spawn to target
-    const path = this.pathfinding.findPath(
-      { x: spawnX, y: spawnY },
+    const pathToBase = this.pathfinding.findPath(
+      centerLinePos,
       { x: targetX, y: targetY },
       this.state.towers
     );
+
+    // Add phase 2 waypoints (skip first one as it's the center line position we already have)
+    if (pathToBase.length > 1) {
+      path.push(...pathToBase.slice(1));
+    }
 
     // Create minion
     const minion: Minion = {

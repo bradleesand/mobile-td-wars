@@ -90,8 +90,13 @@ export class MinionSprite extends Phaser.GameObjects.Container {
     }
 
     if (data.position) {
+      this.minionData.position = data.position;
       this.x = data.position.x;
       this.y = data.position.y;
+    }
+
+    if (data.path !== undefined) {
+      this.minionData.path = data.path;
     }
   }
 

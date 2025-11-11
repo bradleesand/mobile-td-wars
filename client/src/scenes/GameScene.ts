@@ -367,11 +367,21 @@ export class GameScene extends Phaser.Scene {
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
     if (!this.selectedTowerType || !this.playerSide) return;
 
+    // Define playing field bounds
+    const minBound = 100;
+    const maxX = GAME_CONFIG.CANVAS_WIDTH - minBound;
+    const maxY = GAME_CONFIG.CANVAS_HEIGHT - 200;
+
+    // Check if click is within playing field bounds
+    if (pointer.x < minBound || pointer.x > maxX || pointer.y < minBound || pointer.y > maxY) {
+      return;
+    }
+
     // Check if click is in valid area (player's side)
     const width = this.cameras.main.width;
     const validX = this.playerSide === 'left' ? pointer.x < width / 2 : pointer.x > width / 2;
 
-    if (validX && pointer.y > 100 && pointer.y < this.cameras.main.height - 200) {
+    if (validX) {
       const towerData = GAME_CONFIG.TOWER_DATA[this.selectedTowerType];
 
       if (this.gold >= towerData.cost) {
@@ -380,8 +390,11 @@ export class GameScene extends Phaser.Scene {
         const snappedX = Math.round(pointer.x / gridSize) * gridSize;
         const snappedY = Math.round(pointer.y / gridSize) * gridSize;
 
-        this.networkManager.placeTower(this.selectedTowerType, { x: snappedX, y: snappedY });
-        // Gold will be updated by server via gameState event
+        // Verify snapped position is still within bounds
+        if (snappedX >= minBound && snappedX <= maxX && snappedY >= minBound && snappedY <= maxY) {
+          this.networkManager.placeTower(this.selectedTowerType, { x: snappedX, y: snappedY });
+          // Gold will be updated by server via gameState event
+        }
       } else {
         console.log('Not enough gold!');
       }
