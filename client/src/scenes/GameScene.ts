@@ -331,6 +331,12 @@ export class GameScene extends Phaser.Scene {
 
   private setupNetworkListeners(): void {
     this.networkManager.on('gameState', (room: GameRoom) => {
+      console.log('[GameScene] gameState received:', {
+        state: room.state,
+        playerCount: room.players.length,
+        players: room.players.map(p => ({ name: p.name, side: p.side }))
+      });
+
       // Find our player
       const player = room.players.find(p => p.name === this.playerName);
       if (player) {
@@ -425,21 +431,30 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateUI(gameState?: string, playerCount?: number): void {
+    console.log('[GameScene] updateUI called:', {
+      gameState,
+      playerCount,
+      playerSide: this.playerSide
+    });
+
     this.goldText.setText(`Gold: ${this.gold}`);
     this.healthText.setText(`Health: ${this.health}`);
 
     // Show room code when waiting, show side when playing
     if (gameState === 'PLAYING' && this.playerSide) {
+      console.log('[GameScene] updateUI -> showing side indicator (PLAYING)');
       const sideText = this.playerSide === 'left' ? '← YOUR SIDE (LEFT)' : 'YOUR SIDE (RIGHT) →';
       this.sideIndicatorText.setText(sideText);
       this.sideIndicatorText.setColor('#00ff00');
       this.copyButton.setVisible(false);
     } else if (playerCount && playerCount >= 2) {
+      console.log('[GameScene] updateUI -> showing ready prompt (2+ players)');
       // 2+ players waiting - show ready prompt
       this.sideIndicatorText.setText('Click READY to start!');
       this.sideIndicatorText.setColor('#00ff00');
       this.copyButton.setVisible(false);
     } else {
+      console.log('[GameScene] updateUI -> showing room code (waiting)');
       // 1 player or waiting - show room code
       this.sideIndicatorText.setText(`Room Code: ${this.roomId} - Waiting for opponent...`);
       this.sideIndicatorText.setColor('#ffff00');
