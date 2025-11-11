@@ -19,6 +19,7 @@ export class GameScene extends Phaser.Scene {
   private sideIndicatorText!: Phaser.GameObjects.Text;
   private copyButton!: Phaser.GameObjects.Text;
   private readyButton?: Phaser.GameObjects.Text;
+  private statusText?: Phaser.GameObjects.Text; // Status text below ready button
   private selectedTowerType: TowerType | null = null;
   private towerButtons: Phaser.GameObjects.Rectangle[] = [];
   private enemyButtons: Phaser.GameObjects.Rectangle[] = [];
@@ -285,6 +286,10 @@ export class GameScene extends Phaser.Scene {
           this.readyButton.setBackgroundColor('#666666');
           this.readyButton.disableInteractive();
         }
+        // Update status text
+        if (this.statusText) {
+          this.statusText.setText('Waiting for opponent to be ready...');
+        }
       }
     })
     .on('pointerover', () => {
@@ -297,6 +302,14 @@ export class GameScene extends Phaser.Scene {
         this.readyButton.setBackgroundColor('#00aa00');
       }
     });
+
+    // Status text below ready button
+    this.statusText = this.add.text(width / 2, height / 2 + 100, 'Waiting for opponent...', {
+      fontSize: '24px',
+      color: '#ffff00'
+    })
+    .setOrigin(0.5)
+    .setVisible(true);
   }
 
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
@@ -370,9 +383,12 @@ export class GameScene extends Phaser.Scene {
           }
         });
 
-        // Hide ready button
+        // Hide ready button and status text
         if (this.readyButton) {
           this.readyButton.setVisible(false);
+        }
+        if (this.statusText) {
+          this.statusText.setVisible(false);
         }
       }
 
@@ -447,18 +463,30 @@ export class GameScene extends Phaser.Scene {
       this.sideIndicatorText.setText(sideText);
       this.sideIndicatorText.setColor('#00ff00');
       this.copyButton.setVisible(false);
+      if (this.statusText) {
+        this.statusText.setVisible(false);
+      }
     } else if (playerCount && playerCount >= 2) {
       console.log('[GameScene] updateUI -> showing ready prompt (2+ players)');
       // 2+ players waiting - show ready prompt
       this.sideIndicatorText.setText('Click READY to start!');
       this.sideIndicatorText.setColor('#00ff00');
       this.copyButton.setVisible(false);
+      // Update status text - don't override if already showing "waiting for opponent to be ready"
+      if (this.statusText && !this.isReady) {
+        this.statusText.setText('Both players ready - Click READY!');
+        this.statusText.setVisible(true);
+      }
     } else {
       console.log('[GameScene] updateUI -> showing room code (waiting)');
       // 1 player or waiting - show room code
-      this.sideIndicatorText.setText(`Room Code: ${this.roomId} - Waiting for opponent...`);
+      this.sideIndicatorText.setText(`Room Code: ${this.roomId}`);
       this.sideIndicatorText.setColor('#ffff00');
       this.copyButton.setVisible(true);
+      if (this.statusText) {
+        this.statusText.setText('Waiting for opponent...');
+        this.statusText.setVisible(true);
+      }
     }
   }
 

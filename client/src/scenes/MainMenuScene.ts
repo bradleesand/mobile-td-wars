@@ -57,7 +57,7 @@ export class MainMenuScene extends Phaser.Scene {
     // Create HTML input for room ID
     this.createRoomIdInput(width, height);
 
-    this.joinButton = this.add.text(width / 2, height / 2 + 220, 'Join Room', {
+    this.joinButton = this.add.text(width / 2, height / 2 + 260, 'Join Room', {
       fontSize: '32px',
       color: '#888888',
       backgroundColor: '#444444',
