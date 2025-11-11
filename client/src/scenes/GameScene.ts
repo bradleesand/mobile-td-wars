@@ -15,6 +15,7 @@ export class GameScene extends Phaser.Scene {
 
   private goldText!: Phaser.GameObjects.Text;
   private healthText!: Phaser.GameObjects.Text;
+  private sideIndicatorText!: Phaser.GameObjects.Text;
   private selectedTowerType: TowerType | null = null;
 
   private gold: number = GAME_CONFIG.STARTING_GOLD;
@@ -106,23 +107,31 @@ export class GameScene extends Phaser.Scene {
       color: '#ff0000'
     }).setOrigin(1, 0.5);
 
-    // Bottom bar - Tower selection
-    const bottomBar = this.add.rectangle(width / 2, height - 100, width, 200, 0x000000, 0.8).setOrigin(0.5);
-
-    this.add.text(width / 2, height - 180, 'BUILD TOWERS', {
-      fontSize: '20px',
-      color: '#ffffff'
+    // Side indicator (will be updated when side is known)
+    this.sideIndicatorText = this.add.text(width / 2, 30, 'Waiting for opponent...', {
+      fontSize: '28px',
+      color: '#ffff00',
+      fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    // Tower buttons
+    // Bottom bar
+    const bottomBar = this.add.rectangle(width / 2, height - 100, width, 200, 0x000000, 0.8).setOrigin(0.5);
+
+    // Left section - Build Towers
+    this.add.text(width / 4, height - 180, 'BUILD TOWERS', {
+      fontSize: '20px',
+      color: '#00ff00'
+    }).setOrigin(0.5);
+
+    // Tower buttons (left side)
     const towerTypes = [TowerType.ARCHER, TowerType.CANNON, TowerType.MAGIC, TowerType.SNIPER];
-    const buttonWidth = 200;
-    const startX = (width - (buttonWidth * towerTypes.length + 20 * (towerTypes.length - 1))) / 2;
+    const buttonWidth = 180;
+    const towerStartX = 40;
 
     towerTypes.forEach((type, index) => {
       const data = GAME_CONFIG.TOWER_DATA[type];
-      const x = startX + index * (buttonWidth + 20);
-      const y = height - 120;
+      const x = towerStartX + index * (buttonWidth + 10);
+      const y = height - 100;
 
       const button = this.add.rectangle(x, y, buttonWidth, 80, 0x00aa00)
         .setStrokeStyle(2, 0x00ff00)
@@ -158,20 +167,21 @@ export class GameScene extends Phaser.Scene {
       }).setOrigin(0.5);
     });
 
-    // Enemy sending section
-    this.add.text(width / 2, height - 180, 'SEND ENEMIES', {
+    // Right section - Send Enemies
+    this.add.text(width * 3 / 4, height - 180, 'SEND ENEMIES', {
       fontSize: '20px',
-      color: '#ffffff'
+      color: '#ff0000'
     }).setOrigin(0.5);
 
+    // Enemy buttons (right side)
     const enemyTypes = [EnemyType.SCOUT, EnemyType.WARRIOR, EnemyType.TANK, EnemyType.BOSS];
-    const enemyButtonWidth = 150;
-    const enemyStartX = (width - (enemyButtonWidth * enemyTypes.length + 15 * (enemyTypes.length - 1))) / 2;
+    const enemyButtonWidth = 200;
+    const enemyStartX = width / 2 + 40;
 
     enemyTypes.forEach((type, index) => {
       const data = GAME_CONFIG.ENEMY_DATA[type];
-      const x = enemyStartX + index * (enemyButtonWidth + 15);
-      const y = height - 40;
+      const x = enemyStartX + index * (enemyButtonWidth + 10);
+      const y = height - 100;
 
       this.add.rectangle(x, y, enemyButtonWidth, 60, 0xaa0000)
         .setStrokeStyle(2, 0xff0000)
@@ -292,6 +302,12 @@ export class GameScene extends Phaser.Scene {
   private updateUI(): void {
     this.goldText.setText(`Gold: ${this.gold}`);
     this.healthText.setText(`Health: ${this.health}`);
+
+    if (this.playerSide) {
+      const sideText = this.playerSide === 'left' ? '← YOUR SIDE (LEFT)' : 'YOUR SIDE (RIGHT) →';
+      this.sideIndicatorText.setText(sideText);
+      this.sideIndicatorText.setColor('#00ff00');
+    }
   }
 
   private showGameOver(isWinner: boolean): void {

@@ -92,7 +92,12 @@ export class TowerSprite extends Phaser.GameObjects.Container {
     let closestDistance = range;
 
     for (const enemy of enemies) {
-      // Only target enemies on the opposite side
+      // Only target enemies NOT sent by this tower's owner
+      const enemyData = enemy.getData();
+      if (enemyData.senderId === this.towerData.ownerId) {
+        continue; // Skip friendly enemies
+      }
+
       const distance = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
 
       if (distance <= range && distance < closestDistance) {
