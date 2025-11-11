@@ -73,7 +73,9 @@ export class Pathfinding {
           continue;
         }
 
-        const tentativeG = current.g + 1; // Cost to move to neighbor
+        // Use the neighbor's cost (1.0 for cardinal, 1.414 for diagonal)
+        const moveCost = (neighbor as any).cost || 1.0;
+        const tentativeG = current.g + moveCost;
 
         // Check if neighbor is already in open list
         const existingNode = openList.find(n => n.x === neighbor.x && n.y === neighbor.y);
@@ -98,15 +100,19 @@ export class Pathfinding {
   }
 
   /**
-   * Get valid neighbors for a grid cell
+   * Get valid neighbors for a grid cell (8-directional with diagonals)
    */
   private getNeighbors(node: PathNode, blockedCells: Set<string>): PathNode[] {
     const neighbors: PathNode[] = [];
     const directions = [
-      { x: 0, y: -1 }, // Up
-      { x: 1, y: 0 },  // Right
-      { x: 0, y: 1 },  // Down
-      { x: -1, y: 0 }  // Left
+      { x: 0, y: -1, cost: 1.0 },      // Up
+      { x: 1, y: 0, cost: 1.0 },       // Right
+      { x: 0, y: 1, cost: 1.0 },       // Down
+      { x: -1, y: 0, cost: 1.0 },      // Left
+      { x: 1, y: -1, cost: 1.414 },    // Up-Right (diagonal)
+      { x: 1, y: 1, cost: 1.414 },     // Down-Right (diagonal)
+      { x: -1, y: 1, cost: 1.414 },    // Down-Left (diagonal)
+      { x: -1, y: -1, cost: 1.414 }    // Up-Left (diagonal)
     ];
 
     for (const dir of directions) {
@@ -124,24 +130,39 @@ export class Pathfinding {
         continue;
       }
 
+      // For diagonal moves, ensure both adjacent cells are also free (no corner cutting)
+      if (dir.x !== 0 && dir.y !== 0) {
+        const key1 = `${node.x + dir.x},${node.y}`;
+        const key2 = `${node.x},${node.y + dir.y}`;
+        if (blockedCells.has(key1) || blockedCells.has(key2)) {
+          continue; // Can't cut through corners
+        }
+      }
+
       neighbors.push({
         x,
         y,
         g: 0,
         h: 0,
         f: 0,
-        parent: null
-      });
+        parent: null,
+        cost: dir.cost
+      } as PathNode & { cost: number });
     }
 
     return neighbors;
   }
 
   /**
-   * Manhattan distance heuristic
+   * Octile distance heuristic (for 8-directional movement with diagonals)
+   * More accurate than Manhattan for diagonal pathfinding
    */
   private heuristic(a: Vector2, b: Vector2): number {
-    return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+    const dx = Math.abs(a.x - b.x);
+    const dy = Math.abs(a.y - b.y);
+    // Diagonal cost is 1.414, cardinal cost is 1.0
+    // Use the minimum of dx/dy for diagonals, then add remaining cardinal distance
+    return 1.414 * Math.min(dx, dy) + Math.abs(dx - dy);
   }
 
   /**
