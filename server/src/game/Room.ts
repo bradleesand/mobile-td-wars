@@ -182,64 +182,49 @@ export class Room {
     // Determine spawn position and target
     const targetSide = player.side === 'left' ? 'right' : 'left';
 
-    // Spawn at edges as specified:
-    // - Left side minions spawn at bottom edge (but within arena bounds)
-    // - Right side minions spawn at top edge
+    // Spawn at edges - inside the playable area where towers can block
+    // Left side: spawn at left edge, move right through playing field
+    // Right side: spawn at right edge, move left through playing field
     let spawnX: number;
     let spawnY: number;
     const centerX = GAME_CONFIG.CANVAS_WIDTH / 2;
-    const bottomEdge = GAME_CONFIG.CANVAS_HEIGHT - 220; // Stay above UI buttons
-    const topEdge = 100;
+    const playableY = GAME_CONFIG.CANVAS_HEIGHT / 2; // Middle of playing field
 
     if (player.side === 'left') {
-      // Spawn at bottom edge, somewhere along the left half
-      spawnX = Math.random() * (centerX - 200) + 100;
-      spawnY = bottomEdge;
+      // Spawn at left edge in middle of playing field
+      spawnX = 150;
+      spawnY = playableY + (Math.random() - 0.5) * 100; // Add some randomness
     } else {
-      // Spawn at top edge, somewhere along the right half
-      spawnX = Math.random() * (centerX - 200) + centerX + 100;
-      spawnY = topEdge;
+      // Spawn at right edge in middle of playing field
+      spawnX = GAME_CONFIG.CANVAS_WIDTH - 150;
+      spawnY = playableY + (Math.random() - 0.5) * 100; // Add some randomness
     }
 
-    // Create two-phase path:
-    // Phase 1: Follow perimeter to center line
-    // Phase 2: Pathfind from center line to enemy base
+    // Two-phase movement:
+    // Phase 1: Pathfind from spawn to center line (towers can block)
+    // Phase 2: Beeline directly to base (no pathfinding, direct line)
     const path: Vector2[] = [];
 
-    // Phase 1: Move along perimeter to center line
-    if (player.side === 'left') {
-      // Move along bottom edge to center
-      path.push({ x: centerX, y: bottomEdge });
-    } else {
-      // Move along top edge to center
-      path.push({ x: centerX, y: topEdge });
-    }
-
-    // Phase 2: Pathfind from center line to enemy base
-    const centerLinePos = path[path.length - 1];
-    const targetX = targetSide === 'left' ? 100 : GAME_CONFIG.CANVAS_WIDTH - 100;
-    const targetY = GAME_CONFIG.CANVAS_HEIGHT / 2;
-    const basePosition = { x: targetX, y: targetY };
-
-    const pathToBase = this.pathfinding.findPath(
-      centerLinePos,
-      basePosition,
+    // Phase 1: Pathfind to center line
+    const centerLineTarget = { x: centerX, y: spawnY };
+    const pathToCenter = this.pathfinding.findPath(
+      { x: spawnX, y: spawnY },
+      centerLineTarget,
       this.state.towers
     );
 
-    // Add phase 2 waypoints (skip first one as it's the center line position we already have)
-    if (pathToBase.length > 1) {
-      path.push(...pathToBase.slice(1));
-    } else if (pathToBase.length === 0) {
-      // No path found - add direct path to base as fallback
-      path.push(basePosition);
+    // Add pathfinding waypoints to center (skip first as it's spawn position)
+    if (pathToCenter.length > 1) {
+      path.push(...pathToCenter.slice(1));
+    } else {
+      // No path found or already at center - add center point
+      path.push(centerLineTarget);
     }
 
-    // Ensure the final waypoint is exactly at the base position
-    const lastWaypoint = path[path.length - 1];
-    if (lastWaypoint.x !== basePosition.x || lastWaypoint.y !== basePosition.y) {
-      path.push(basePosition);
-    }
+    // Phase 2: Direct beeline to enemy base (no pathfinding)
+    const targetX = targetSide === 'left' ? 100 : GAME_CONFIG.CANVAS_WIDTH - 100;
+    const targetY = GAME_CONFIG.CANVAS_HEIGHT / 2;
+    path.push({ x: targetX, y: targetY });
 
     // Create minion
     const minion: Minion = {
@@ -463,40 +448,41 @@ export class Room {
     const tempTowers = [...this.state.towers, newTower];
 
     // Define spawn areas for both sides
-    // Left side spawns at bottom (within arena), right side spawns at top
-    const bottomEdge = GAME_CONFIG.CANVAS_HEIGHT - 220;
-    const topEdge = 100;
+    // Spawns are at left/right edges in the middle of playing field
+    const playableY = GAME_CONFIG.CANVAS_HEIGHT / 2;
+    const centerX = GAME_CONFIG.CANVAS_WIDTH / 2;
 
     const leftSpawnPoints = [
-      { x: 100, y: bottomEdge },
-      { x: GAME_CONFIG.CANVAS_WIDTH / 4, y: bottomEdge },
-      { x: GAME_CONFIG.CANVAS_WIDTH / 2 - 100, y: bottomEdge }
+      { x: 150, y: playableY - 50 },
+      { x: 150, y: playableY },
+      { x: 150, y: playableY + 50 }
     ];
 
     const rightSpawnPoints = [
-      { x: GAME_CONFIG.CANVAS_WIDTH / 2 + 100, y: topEdge },
-      { x: GAME_CONFIG.CANVAS_WIDTH * 3 / 4, y: topEdge },
-      { x: GAME_CONFIG.CANVAS_WIDTH - 100, y: topEdge }
+      { x: GAME_CONFIG.CANVAS_WIDTH - 150, y: playableY - 50 },
+      { x: GAME_CONFIG.CANVAS_WIDTH - 150, y: playableY },
+      { x: GAME_CONFIG.CANVAS_WIDTH - 150, y: playableY + 50 }
     ];
 
-    // Target bases
-    const leftBase = { x: 100, y: GAME_CONFIG.CANVAS_HEIGHT / 2 };
-    const rightBase = { x: GAME_CONFIG.CANVAS_WIDTH - 100, y: GAME_CONFIG.CANVAS_HEIGHT / 2 };
+    // Check if minions can reach the center line
+    // (After reaching center, they beeline directly to base with no pathfinding)
 
-    // Check if at least one path exists from left spawns to right base
-    const leftHasPath = leftSpawnPoints.some(spawn => {
-      const path = this.pathfinding.findPath(spawn, rightBase, tempTowers);
+    // Check if at least one left spawn can reach center line
+    const leftCanReachCenter = leftSpawnPoints.some(spawn => {
+      const centerTarget = { x: centerX, y: spawn.y };
+      const path = this.pathfinding.findPath(spawn, centerTarget, tempTowers);
       return path.length > 0;
     });
 
-    // Check if at least one path exists from right spawns to left base
-    const rightHasPath = rightSpawnPoints.some(spawn => {
-      const path = this.pathfinding.findPath(spawn, leftBase, tempTowers);
+    // Check if at least one right spawn can reach center line
+    const rightCanReachCenter = rightSpawnPoints.some(spawn => {
+      const centerTarget = { x: centerX, y: spawn.y };
+      const path = this.pathfinding.findPath(spawn, centerTarget, tempTowers);
       return path.length > 0;
     });
 
-    // Block the tower if it would block ALL paths for EITHER side
-    return !leftHasPath || !rightHasPath;
+    // Block the tower if it would prevent EITHER side from reaching center
+    return !leftCanReachCenter || !rightCanReachCenter;
   }
 
   private generateId(): string {
